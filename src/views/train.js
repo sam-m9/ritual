@@ -9,6 +9,11 @@ export function effortTag(ex, day) {
   return '';
 }
 
+/** Saved link, or a YouTube form search so the button is always useful mid-workout. */
+function videoUrl(ex) {
+  return ex.url || `https://www.youtube.com/results?search_query=${encodeURIComponent(`${ex.name} form`)}`;
+}
+
 function lastLine(data, ex) {
   const last = lastEntry(data, ex.name);
   if (!last) return 'no history yet';
@@ -42,7 +47,7 @@ function exerciseCard(data, day, ex) {
         <h3 class="ex-name">${esc(ex.name)}</h3>
         <div class="ex-rx"><span class="rx">${esc(ex.sets)} × ${esc(ex.reps)}</span>${effortTag(ex, day)}</div>
       </div>
-      <button class="play ${ex.url ? '' : 'off'}" data-act="video" data-url="${esc(ex.url)}" aria-label="Watch form video">${ICON.play}</button>
+      <button class="play" data-act="video" data-url="${esc(videoUrl(ex))}" aria-label="${ex.url ? 'Watch form video' : 'Search form videos'}">${ICON.play}</button>
     </div>
     <div class="last label">Last time · <b>${esc(lastLine(data, ex))}</b></div>
     ${rows}
@@ -74,9 +79,9 @@ export function trainView(data, ui) {
       <span class="day-badge">Day ${day.num}</span>
       <h1 class="day-title">${esc(day.name)}</h1>
     </header>
-    <p class="focus label">${esc(day.focus)}</p>
-    <div class="chips"><span class="chip">${day.exercises.length} exercises</span><span class="chip">${setCount} sets</span></div>
-    <div class="stack">
+    <p class="meta label">${esc(day.focus)} · ${day.exercises.length} exercises · ${setCount} sets</p>
+    ${day.note ? `<p class="day-note">${esc(day.note)}</p>` : ''}
+    <div class="stack train-stack">
       <section class="card white progress" id="progress">
         <div class="progress-top"><span>${prog.done} / ${prog.total} sets</span><span>${prog.pct}%</span></div>
         <div class="bar"><i style="width:${prog.pct}%"></i></div>

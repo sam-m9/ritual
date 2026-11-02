@@ -56,7 +56,7 @@ function render({ keepScroll = true } = {}) {
       ${TABS.map((t) => `<button class="${ui.tab === t.id ? 'on' : ''}" data-act="tab" data-tab="${t.id}" aria-current="${ui.tab === t.id ? 'page' : 'false'}">${t.label}</button>`).join('')}
     </nav>` : '';
 
-  root.innerHTML = `<main class="app">${body}</main>${tabbar}`;
+  root.innerHTML = `<div class="status-scrim" aria-hidden="true"></div><main class="app">${body}</main>${chrome ? '<div class="tab-fade" aria-hidden="true"></div>' : ''}${tabbar}`;
   window.scrollTo(0, keepScroll ? y : 0);
 
   if (ui.tab === 'train' && !ui.view) {

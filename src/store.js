@@ -3,11 +3,11 @@
 // The same document is what gets exported to a file and, later, synced to Google Drive.
 // UI-only state (selected tab, open sections) lives under a separate key and is never exported.
 //
-// Document shape (schema 1):
+// Document shape (schema 2):
 // {
 //   app: 'ritual', schema: 1, updatedAt: ISO string,
 //   settings:  { unit: 'lb', waistUnit: 'in', proteinMin, proteinMax },
-//   program:   [{ id, num, name, focus, optional, noRir, exercises: [{ id, name, sets, reps, effort, eq, url }] }],
+//   program:   [{ id, num, name, focus, note, optional, noRir, exercises: [{ id, name, sets, reps, effort, eq, url }] }],
 //   current:   { [dayId]: { startedAt, sets: { [exerciseId]: [{ w, r, c }] } } },   // in-progress workout
 //   sessions:  [{ id, dayId, dayName, date, startedAt, finishedAt,
 //                 exercises: [{ exId, name, sets: [{ w, r }] }] }],                 // every finished workout, every set
@@ -21,7 +21,7 @@
 import { SEED_PROGRAM, SEED_MEALS, SEED_PORTIONS } from './seed.js';
 import { clone, today } from './util.js';
 
-export const SCHEMA = 1;
+export const SCHEMA = 2;
 const DATA_KEY = 'ritual-v1';
 const UI_KEY = 'ritual-ui';
 
@@ -68,8 +68,14 @@ export function migrate(raw) {
   if (!Array.isArray(data.sessions)) data.sessions = [];
   if (!data.current || typeof data.current !== 'object') data.current = {};
 
-  // Future migrations go here:
-  // if (schema < 2) { ... }
+  // v2: the 4-day program (Upper A, Legs, Upper B + leg top-up, Upper C, optional Pump) replaces the old 5-day one.
+  if (schema < 2) data.program = clone(SEED_PROGRAM);
+
+  // Drop in-progress logs for days that no longer exist.
+  const dayIds = new Set(data.program.map((d) => d.id));
+  for (const id of Object.keys(data.current)) if (!dayIds.has(id)) delete data.current[id];
+
+  // Future migrations go here: if (schema < 3) { ... }
 
   data.app = 'ritual';
   data.schema = SCHEMA;

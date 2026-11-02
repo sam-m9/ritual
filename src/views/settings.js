@@ -49,6 +49,7 @@ export function settingsView(data, ui) {
         <div><div class="mini-label">Day name</div><input class="field" value="${esc(day.name)}" data-in="day" data-field="name" data-day="${day.id}"></div>
         <div><div class="mini-label">Focus</div><input class="field" value="${esc(day.focus)}" data-in="day" data-field="focus" data-day="${day.id}"></div>
       </div>
+      <div><div class="mini-label">Coaching note</div><textarea class="field" rows="2" style="min-height:72px" placeholder="Optional cue shown under the day title" data-in="day" data-field="note" data-day="${day.id}">${esc(day.note || '')}</textarea></div>
       ${day.exercises.map((ex) => exerciseEditor(day, ex)).join('')}
       <button class="dashed" data-act="add-ex" data-day="${day.id}">+ Add exercise</button>
       <p class="fine">Tap the icon to change equipment. Renaming a lift keeps its history only if the new name matches an existing lift.</p>

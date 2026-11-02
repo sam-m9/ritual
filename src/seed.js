@@ -2,6 +2,7 @@
 //
 // Exercise fields:
 //   name, sets (number), reps (string range), effort, eq, url
+// Day fields: id, num, name, focus, note (coaching cue shown under the title), optional, noRir
 //   effort: RIR string like "2" or "1-2"; "FAIL" = to failure on the last set only; "" = none
 //   eq: "db" | "bar" | "cable" | "machine" | "body"
 
@@ -9,7 +10,7 @@ const ex = (id, name, sets, reps, effort, eq) => ({ id, name, sets, reps, effort
 
 export const SEED_PROGRAM = [
   {
-    id: 'd1', num: 1, name: 'Upper A', focus: 'Push-leaning', optional: false, noRir: false,
+    id: 'd1', num: 1, name: 'Upper A', focus: 'Push-leaning', optional: false, noRir: false, note: '',
     exercises: [
       ex('d1e1', 'Flat dumbbell press', 3, '6-10', '2', 'db'),
       ex('d1e2', 'Chest-supported row', 3, '8-12', '1-2', 'machine'),
@@ -21,48 +22,52 @@ export const SEED_PROGRAM = [
     ],
   },
   {
-    id: 'd2', num: 2, name: 'Lower A', focus: 'Squat-leaning', optional: false, noRir: false,
+    id: 'd2', num: 2, name: 'Legs', focus: 'Your one full lower day', optional: false, noRir: false,
+    note: "Give this day everything, don't rush it. It's your main lower-body stimulus for the week.",
     exercises: [
       ex('d2e1', 'Back squat', 3, '5-8', '2', 'bar'),
       ex('d2e2', 'Romanian deadlift', 3, '8-10', '2', 'bar'),
       ex('d2e3', 'Leg press', 3, '10-15', '1', 'machine'),
       ex('d2e4', 'Seated leg curl', 3, '10-15', '0-1', 'machine'),
-      ex('d2e5', 'Standing calf raise', 3, '10-15', '0-1', 'machine'),
+      ex('d2e5', 'Standing calf raise', 4, '10-15', '0-1', 'machine'),
       ex('d2e6', 'Hanging leg raise', 3, '10-15', '1', 'body'),
     ],
   },
   {
-    id: 'd4', num: 4, name: 'Upper B', focus: 'Pull-leaning', optional: false, noRir: false,
+    id: 'd3', num: 3, name: 'Upper B', focus: 'Pull-leaning + leg top-up', optional: false, noRir: false,
+    note: 'Leg press and leg curl are the leg top-up, your light second hit. Honest effort, no need to grind.',
     exercises: [
-      ex('d4e1', 'Overhead press', 3, '6-10', '2', 'bar'),
-      ex('d4e2', 'Weighted pull-up or lat pulldown', 3, '8-12', '1-2', 'body'),
-      ex('d4e3', 'Incline dumbbell press or dip', 3, '8-12', '1-2', 'db'),
-      ex('d4e4', 'Seated cable row', 3, '10-12', '1-2', 'cable'),
-      ex('d4e5', 'Dumbbell lateral raise', 3, '12-20', '0-1', 'db'),
-      ex('d4e6', 'Incline dumbbell curl', 2, '10-15', 'FAIL', 'db'),
-      ex('d4e7', 'Overhead cable triceps extension', 2, '10-15', 'FAIL', 'cable'),
+      ex('d3e1', 'Overhead press', 3, '6-10', '2', 'bar'),
+      ex('d3e2', 'Weighted pull-up or lat pulldown', 3, '8-12', '1-2', 'body'),
+      ex('d3e3', 'Seated cable row', 3, '10-12', '1-2', 'cable'),
+      ex('d3e4', 'Leg press', 3, '10-15', '1-2', 'machine'),
+      ex('d3e5', 'Seated leg curl', 2, '12-15', 'FAIL', 'machine'),
+      ex('d3e6', 'Face pull', 3, '15-20', '0-1', 'cable'),
+      ex('d3e7', 'Incline dumbbell curl', 2, '10-15', 'FAIL', 'db'),
     ],
   },
   {
-    id: 'd5', num: 5, name: 'Lower B', focus: 'Hinge-leaning', optional: false, noRir: false,
+    id: 'd4', num: 4, name: 'Upper C', focus: 'Chest & arms detail', optional: false, noRir: false,
+    note: "The look day. Soft fixed elbow bend on the flyes, squeeze and hug, don't let it become a press. High-to-low finishes with hands crossing low at your waist; low-to-high finishes with hands meeting at upper-chest height.",
     exercises: [
-      ex('d5e1', 'Deadlift or trap-bar deadlift', 3, '4-6', '2', 'bar'),
-      ex('d5e2', 'Bulgarian split squat', 3, '8-12 per leg', '1-2', 'db'),
-      ex('d5e3', 'Hack squat or leg press', 3, '10-15', '1', 'machine'),
-      ex('d5e4', 'Leg extension', 3, '12-15', 'FAIL', 'machine'),
-      ex('d5e5', 'Seated calf raise', 3, '12-20', '0-1', 'machine'),
-      ex('d5e6', 'Pallof press or cable woodchop', 3, '10-12 per side', '1', 'cable'),
+      ex('d4e1', 'Incline dumbbell press', 3, '8-12', '1-2', 'db'),
+      ex('d4e2', 'High-to-low cable fly', 3, '12-15', '0-1', 'cable'),
+      ex('d4e3', 'Low-to-high cable fly', 3, '12-15', '0-1', 'cable'),
+      ex('d4e4', 'Dumbbell lateral raise', 3, '12-20', '0-1', 'db'),
+      ex('d4e5', 'Overhead cable triceps extension', 3, '10-15', 'FAIL', 'cable'),
+      ex('d4e6', 'Cable curl', 3, '10-15', 'FAIL', 'cable'),
     ],
   },
   {
-    id: 'd6', num: 6, name: 'Pump', focus: 'Weak points · optional', optional: true, noRir: true,
+    id: 'd5', num: 5, name: 'Pump', focus: 'Weak points · optional', optional: true, noRir: true,
+    note: 'On a week legs feel like they deserve more, swap this for a second short leg session instead.',
     exercises: [
-      ex('d6e1', 'Lateral raise', 3, '15-25', '', 'db'),
-      ex('d6e2', 'Face pull', 3, '15-20', '', 'cable'),
-      ex('d6e3', 'Cable curl', 3, '12-15', '', 'cable'),
-      ex('d6e4', 'Triceps pushdown', 3, '12-15', '', 'cable'),
-      ex('d6e5', 'Rear-delt fly', 3, '15-20', '', 'db'),
-      ex('d6e6', 'Cable crunch or hanging leg raise', 3, '12-15', '', 'cable'),
+      ex('d5e1', 'Lateral raise', 3, '15-25', '', 'db'),
+      ex('d5e2', 'Face pull', 3, '15-20', '', 'cable'),
+      ex('d5e3', 'Cable curl', 3, '12-15', '', 'cable'),
+      ex('d5e4', 'Triceps pushdown', 3, '12-15', '', 'cable'),
+      ex('d5e5', 'Rear-delt fly', 3, '15-20', '', 'db'),
+      ex('d5e6', 'Cable crunch or hanging leg raise', 3, '12-15', '', 'cable'),
     ],
   },
 ];

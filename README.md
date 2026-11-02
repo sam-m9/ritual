@@ -4,7 +4,7 @@ A personal, phone-first training and nutrition log. You add it to your iPhone Ho
 
 ## What it does
 
-- **Train**: a 5-day program (Upper A, Lower A, Upper B, Lower B, optional Pump). For every set you get weight and reps fields and a check box. "Last time" shows what you lifted before. Checking a blank set fills it from last time. A day is finished by "Finish & log" (or "Finish early"). The app then opens on the **next day in the rotation**, so a missed gym day never breaks the order. The optional Pump day is skipped in the rotation; tap its pill when you want it.
+- **Train**: a 4-day program (Upper A, Legs, Upper B + leg top-up, Upper C, plus an optional Pump day). For every set you get weight and reps fields and a check box. "Last time" shows what you lifted before. Checking a blank set fills it from last time. A day is finished by "Finish & log" (or "Finish early"). The app then opens on the **next day in the rotation**, so a missed gym day never breaks the order. The optional Pump day is skipped in the rotation; tap its pill when you want it.
 - **Nutrition**: protein target, a 4-meal checklist that resets each day, hand-portion guide, a cookbook (meal ideas, snacks, low-sugar desserts with ingredients, steps, protein and time), and a grocery staples list. "+ Groceries" on a recipe adds its ingredients to that list.
 - **Progress**: one-tap bodyweight and waist logging, trend bars, sessions this week and in total, and per-lift history built from every finished session.
 - **Settings**: edit the program (exercises, sets, reps, effort, equipment, video links), set the protein target, export or import JSON, and reset.
