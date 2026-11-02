@@ -341,7 +341,17 @@ root.addEventListener('input', (e) => {
   if (kind === 'set') {
     const ex = exById(store.ui.dayId, el.dataset.ex);
     if (!ex) return;
-    setsFor(d, store.ui.dayId, ex)[Number(el.dataset.i)][el.dataset.field] = el.value.trim();
+    const sets = setsFor(d, store.ui.dayId, ex);
+    const set = sets[Number(el.dataset.i)];
+    set[el.dataset.field] = el.value.trim();
+    if (el.dataset.field === 'w') {
+      // A typed weight flows down to the untouched sets below it, live, without stealing focus.
+      set.t = true;
+      setsFor(d, store.ui.dayId, ex);
+      root.querySelectorAll(`[data-in="set"][data-field="w"][data-ex="${ex.id}"]`).forEach((input) => {
+        if (input !== el) input.value = sets[Number(input.dataset.i)].w;
+      });
+    }
   } else if (kind === 'ex') {
     const ex = exById(el.dataset.day, el.dataset.ex);
     if (!ex) return;

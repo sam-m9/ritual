@@ -13,7 +13,27 @@ export function setsFor(data, dayId, ex) {
   const n = Math.max(1, Number(ex.sets) || 1);
   while (list.length < n) list.push({ w: '', r: '', c: false });
   if (list.length > n) list.length = n;
+  carryWeights(data, ex, list);
   return list;
+}
+
+/**
+ * Pre-fill weights so you rarely type them.
+ * A set you typed in (t) or checked (c) is kept as is. Every other set takes the weight
+ * from the nearest such set above it today, otherwise the same set from the last time
+ * you did this lift (matched by name, so it carries across days).
+ */
+export function carryWeights(data, ex, list) {
+  const last = lastEntry(data, ex.name)?.sets || [];
+  let live = null;
+  list.forEach((s, i) => {
+    if (s.t || s.c) {
+      if (s.w !== '') live = s.w;
+      return;
+    }
+    const prev = (last[i] || last.at(-1))?.w;
+    s.w = live ?? (prev != null ? String(prev) : '');
+  });
 }
 
 export function dayProgress(data, day) {
@@ -30,7 +50,7 @@ export function dayProgress(data, day) {
 export function dayHasActivity(data, dayId) {
   const cur = data.current[dayId];
   if (!cur) return false;
-  return Object.values(cur.sets).some((list) => list.some((s) => s.c || s.w !== '' || s.r !== ''));
+  return Object.values(cur.sets).some((list) => list.some((s) => s.c || s.t || s.r !== ''));
 }
 
 /** Most recent finished-session entry for a lift, matched by name so it carries across days. */
