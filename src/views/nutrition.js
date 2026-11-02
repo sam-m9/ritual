@@ -1,0 +1,105 @@
+import { esc } from '../util.js';
+import { ICON } from '../icons.js';
+import { RECIPE_CATEGORIES } from '../seed.js';
+
+function recipeMeta(r) {
+  const bits = [];
+  if (r.protein) bits.push(`${r.protein}g P`);
+  if (r.minutes) bits.push(`${r.minutes} min`);
+  return bits.join(' · ');
+}
+
+function recipeItem(r, open) {
+  const body = open ? `
+    <div class="recipe-body">
+      ${r.ingredients.length ? `<div class="label">Ingredients</div><ul>${r.ingredients.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : ''}
+      ${r.steps.length ? `<div class="label">Steps</div><ol>${r.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>` : ''}
+      ${r.notes ? `<div class="label">Notes</div><p>${esc(r.notes)}</p>` : ''}
+      <div class="recipe-actions">
+        <button class="btn" data-act="edit-recipe" data-id="${r.id}">Edit</button>
+        ${r.ingredients.length ? `<button class="btn ghost" data-act="recipe-to-groc" data-id="${r.id}">+ Groceries</button>` : ''}
+        ${r.url ? `<a class="btn ghost" style="display:inline-flex;align-items:center;text-decoration:none" href="${esc(r.url)}" target="_blank" rel="noopener">Link ↗</a>` : ''}
+      </div>
+    </div>` : '';
+  return `
+    <div class="recipe">
+      <button class="recipe-h" data-act="toggle-open" data-key="r:${r.id}" aria-expanded="${open}">
+        <b>${esc(r.title || 'Untitled')}</b><span>${esc(recipeMeta(r))}</span>
+      </button>
+      ${body}
+    </div>`;
+}
+
+function recipeSection(data, ui, cat) {
+  const key = `sec:${cat.id}`;
+  const open = !!ui.open[key];
+  const items = data.nutrition.recipes.filter((r) => r.cat === cat.id);
+  const body = open ? `
+    <div class="collapse-body">
+      ${items.length ? items.map((r) => recipeItem(r, !!ui.open[`r:${r.id}`])).join('') :
+        '<p class="empty">Nothing here yet. Add the easy ones you actually make.</p>'}
+      <button class="dashed on-card" data-act="new-recipe" data-cat="${cat.id}">+ ${esc(cat.add)}</button>
+    </div>` : '';
+  return `
+    <section class="card collapse">
+      <button class="collapse-h" data-act="toggle-open" data-key="${key}" aria-expanded="${open}">
+        <h3>${esc(cat.label)}<span class="n">${items.length}</span></h3><span class="pm">${open ? '–' : '+'}</span>
+      </button>
+      ${body}
+    </section>`;
+}
+
+export function nutritionView(data, ui) {
+  const n = data.nutrition;
+  const s = data.settings;
+  const doneCount = n.meals.filter((m) => n.today.done[m.id]).length;
+
+  const meals = n.meals.map((m) => {
+    const on = !!n.today.done[m.id];
+    return `
+      <button class="card meal" data-act="toggle-meal" data-id="${m.id}" aria-pressed="${on}">
+        <span class="check ${on ? 'on' : ''}">${ICON.check}</span>
+        <span><h3>${esc(m.name)}</h3><p>${esc(m.portions)}</p></span>
+      </button>`;
+  }).join('');
+
+  const portions = n.portions.map((p) => `
+    <div class="card"><div class="label">${esc(p.label)}</div><div class="v">${esc(p.value)}</div></div>`).join('');
+
+  const groc = n.groceries.map((g) => `
+    <div class="groc ${g.done ? 'on' : ''}">
+      <button class="check ${g.done ? 'on' : ''}" data-act="toggle-groc" data-id="${g.id}" aria-label="Toggle ${esc(g.name)}">${ICON.check}</button>
+      <button class="groc-name" data-act="toggle-groc" data-id="${g.id}">${esc(g.name)}</button>
+      <button class="rm" data-act="remove-groc" data-id="${g.id}" aria-label="Remove ${esc(g.name)}">✕</button>
+    </div>`).join('');
+
+  const target = s.proteinMin && s.proteinMax && s.proteinMin !== s.proteinMax
+    ? `${s.proteinMin}–${s.proteinMax}` : `${s.proteinMax || s.proteinMin || '—'}`;
+
+  return `
+    <div class="stack">
+      <section class="card ink target">
+        <div class="label">Daily protein target</div>
+        <div class="big">${esc(target)}<small>g</small></div>
+      </section>
+
+      <div class="section-h"><h2>Meals today</h2><span class="count">${doneCount} / ${n.meals.length}</span></div>
+      ${meals}
+
+      <div class="section-h"><h2>Hand portions</h2></div>
+      <div class="portions">${portions}</div>
+
+      <div class="section-h"><h2>Cookbook</h2></div>
+      ${RECIPE_CATEGORIES.map((c) => recipeSection(data, ui, c)).join('')}
+
+      <div class="section-h"><h2>Grocery staples</h2>${n.groceries.length ? `<span class="count">${n.groceries.filter((g) => g.done).length} / ${n.groceries.length}</span>` : ''}</div>
+      <section class="card">
+        ${groc || '<p class="empty">Your go-to list. Check things off as you shop; checks stay until you clear them.</p>'}
+        <form class="add-row" data-form="add-groc">
+          <input class="field" name="item" placeholder="Add a staple" autocomplete="off" enterkeyhint="done">
+          <button class="btn" type="submit">Add</button>
+        </form>
+        ${n.groceries.some((g) => g.done) ? '<button class="undo" data-act="clear-groc">Uncheck all</button>' : ''}
+      </section>
+    </div>`;
+}
