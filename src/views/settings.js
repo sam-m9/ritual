@@ -34,7 +34,7 @@ function exerciseEditor(day, ex) {
 export function settingsView(data, ui) {
   const day = findDay(data, ui.editDayId);
   const pills = data.program.map((d) => `
-    <button class="pill ${d.id === day.id ? 'on' : ''}" data-act="edit-day" data-day="${d.id}">${d.num} · ${esc(d.name)}</button>`).join('');
+    <button class="pill ${d.id === day.id ? 'on' : ''}" data-act="edit-day" data-day="${d.id}">Day ${d.num} · ${esc(d.name)}</button>`).join('');
   const s = data.settings;
 
   return `

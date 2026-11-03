@@ -23,29 +23,40 @@ function lastLine(data, ex) {
   return `${fmt(top.w)} ${unit} × ${fmt(top.r)}`;
 }
 
+/** Open unless done; a tap on the header overrides either way ('open' | 'closed'). */
+export function isExpanded(ui, ex, done) {
+  const o = ui.open[`ex:${ex.id}`];
+  return o === 'open' ? true : o === 'closed' ? false : !done;
+}
+
 function exerciseCard(data, ui, day, ex) {
   const sets = setsFor(data, day.id, ex);
   const done = sets.every((s) => s.c);
-  const expanded = !done || !!ui.open[`ex:${ex.id}`];
+  const checked = sets.filter((s) => s.c).length;
+  const expanded = isExpanded(ui, ex, done);
   const fail = ex.effort === 'FAIL' && !day.noRir;
   const unit = data.settings.unit;
+  const summary = doneSummary(sets, unit);
+
+  let sub;
+  if (done) {
+    sub = `<div class="ex-sum label">${sets.length}/${sets.length} sets done${summary ? ` · <b>${esc(summary)}</b>` : ''}</div>`;
+  } else if (expanded) {
+    sub = `<div class="ex-rx"><span class="rx">${esc(ex.sets)} × ${esc(ex.reps)}</span>${effortTag(ex, day)}</div>`;
+  } else {
+    sub = `<div class="ex-sum label"><b>${esc(ex.sets)} × ${esc(ex.reps)}</b>${checked ? ` · ${checked}/${sets.length} done` : ''}</div>`;
+  }
 
   const head = `
-    <div class="ex-head">
+    <div class="ex-head" data-act="toggle-ex" data-ex="${ex.id}" role="button" aria-expanded="${expanded}">
       <div class="eq-tile" title="${EQ_LABELS[ex.eq] || ''}">${EQ_ICONS[ex.eq] || ''}</div>
-      <div class="ex-title">
-        <h3 class="ex-name">${esc(ex.name)}</h3>
-        ${done
-          ? `<div class="ex-sum label">${sets.length}/${sets.length} sets done${doneSummary(sets, unit) ? ` · <b>${esc(doneSummary(sets, unit))}</b>` : ''}</div>`
-          : `<div class="ex-rx"><span class="rx">${esc(ex.sets)} × ${esc(ex.reps)}</span>${effortTag(ex, day)}</div>`}
-      </div>
-      ${done
-        ? `<button class="chev ${expanded ? 'up' : ''}" data-act="toggle-ex" data-ex="${ex.id}" aria-expanded="${expanded}" aria-label="${expanded ? 'Hide' : 'Show'} sets">${ICON.chevron}</button>`
-        : `<button class="play" data-act="video" data-url="${esc(videoUrl(ex))}" aria-label="${ex.url ? 'Watch form video' : 'Search form videos'}">${ICON.play}</button>`}
+      <div class="ex-title"><h3 class="ex-name">${esc(ex.name)}</h3>${sub}</div>
+      ${expanded && !done ? `<button class="play" data-act="video" data-url="${esc(videoUrl(ex))}" aria-label="${ex.url ? 'Watch form video' : 'Search form videos'}">${ICON.play}</button>` : ''}
+      <span class="chev ${expanded ? 'up' : ''}" aria-hidden="true">${ICON.chevron}</span>
     </div>`;
 
   if (!expanded) {
-    return `<article class="ex-card done collapsed" data-act="toggle-ex" data-ex="${ex.id}">${head}</article>`;
+    return `<article class="ex-card collapsed ${done ? 'done' : ''}">${head}</article>`;
   }
 
   const rows = sets.map((s, i) => `
@@ -106,7 +117,7 @@ export function trainView(data, ui) {
   const setCount = day.exercises.reduce((n, e) => n + (Number(e.sets) || 0), 0);
 
   const pills = data.program.map((d) => `
-    <button class="pill ${d.id === day.id ? 'on' : ''}" data-act="pick-day" data-day="${d.id}">${d.num} · ${esc(d.name)}</button>`).join('');
+    <button class="pill ${d.id === day.id ? 'on' : ''}" data-act="pick-day" data-day="${d.id}">Day ${d.num} · ${esc(d.name)}</button>`).join('');
 
   const allDone = prog.total > 0 && prog.done === prog.total;
   const banner = allDone ? `
@@ -133,6 +144,7 @@ export function trainView(data, ui) {
         <div class="bar"><i style="width:${prog.pct}%"></i></div>
       </section>
       ${banner}
+      ${day.exercises.length ? `<div class="list-tools"><button data-act="fold-all" data-mode="${day.exercises.some((ex) => isExpanded(ui, ex, setsFor(data, day.id, ex).every((x) => x.c))) ? 'closed' : 'open'}">${day.exercises.some((ex) => isExpanded(ui, ex, setsFor(data, day.id, ex).every((x) => x.c))) ? 'Collapse all' : 'Expand all'}</button></div>` : ''}
       ${day.exercises.map((ex) => exerciseCard(data, ui, day, ex)).join('')}
       ${day.exercises.length ? '' : '<div class="card empty">No exercises on this day yet. Add some in Settings.</div>'}
       ${early}

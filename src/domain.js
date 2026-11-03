@@ -118,20 +118,45 @@ export function finishDay(data, dayId) {
   return session;
 }
 
-/** Per-lift history: one point per session, the top set. Most recently trained lifts first. */
-export function liftHistory(data) {
-  const map = new Map();
+/** Which program day a finished session belongs to (by name first, so older logs still land right). */
+function sessionDay(data, session) {
+  return data.program.find((d) => d.name === session.dayName)
+    || data.program.find((d) => d.id === session.dayId)
+    || null;
+}
+
+/**
+ * Lift history grouped by training day, in program order.
+ * Each lift has one point per session: its top set. Bodyweight lifts chart reps instead.
+ */
+export function liftHistoryByDay(data) {
+  const groups = new Map();
   for (const s of data.sessions) {
+    const day = sessionDay(data, s);
+    const gk = day ? day.id : `old:${s.dayName}`;
+    if (!groups.has(gk)) {
+      groups.set(gk, { day, label: day ? `Day ${day.num} · ${day.name}` : s.dayName || 'Other', lifts: new Map() });
+    }
+    const g = groups.get(gk);
     for (const e of s.exercises) {
       const top = topSet(e.sets);
-      if (!top || top.w === null) continue;
+      if (!top || (top.w === null && top.r === null)) continue;
       const key = liftKey(e.name);
-      if (!map.has(key)) map.set(key, { name: e.name, points: [] });
-      map.get(key).points.push({ d: s.date, w: top.w, r: top.r, at: s.finishedAt });
+      if (!g.lifts.has(key)) g.lifts.set(key, { name: e.name, points: [] });
+      g.lifts.get(key).points.push({ d: s.date, w: top.w, r: top.r, at: s.finishedAt });
     }
   }
-  return [...map.values()].sort((a, b) =>
-    String(b.points.at(-1).at).localeCompare(String(a.points.at(-1).at)));
+  const order = (g) => (g.day ? data.program.indexOf(g.day) : 999);
+  return [...groups.values()]
+    .filter((g) => g.lifts.size)
+    .sort((a, b) => order(a) - order(b))
+    .map((g) => {
+      const exOrder = (name) => {
+        const i = g.day ? g.day.exercises.findIndex((e) => liftKey(e.name) === liftKey(name)) : -1;
+        return i < 0 ? 999 : i;
+      };
+      return { ...g, lifts: [...g.lifts.values()].sort((a, b) => exOrder(a.name) - exOrder(b.name)) };
+    });
 }
 
 export function weekStats(data) {

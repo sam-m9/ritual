@@ -7,7 +7,7 @@ import { findDay, finishDay, lastEntry, logMetric, setsFor, suggestedDayId } fro
 import { EQUIPMENT } from './seed.js';
 import { ICON } from './icons.js';
 import { num, uid } from './util.js';
-import { trainView, fmtClock } from './views/train.js';
+import { trainView, fmtClock, isExpanded } from './views/train.js';
 import { nutritionView } from './views/nutrition.js';
 import { progressView } from './views/progress.js';
 import { settingsView, recipeEditorView } from './views/settings.js';
@@ -168,8 +168,16 @@ const actions = {
   },
 
   'toggle-ex'(el) {
-    const k = `ex:${el.dataset.ex}`;
-    store.ui.open[k] = !store.ui.open[k];
+    const ex = exById(store.ui.dayId, el.dataset.ex);
+    if (!ex) return;
+    const done = setsFor(data(), store.ui.dayId, ex).every((x) => x.c);
+    store.ui.open[`ex:${ex.id}`] = isExpanded(store.ui, ex, done) ? 'closed' : 'open';
+    store.saveUI();
+    render();
+  },
+
+  'fold-all'(el) {
+    for (const ex of findDay(data(), store.ui.dayId).exercises) store.ui.open[`ex:${ex.id}`] = el.dataset.mode;
     store.saveUI();
     render();
   },
@@ -222,6 +230,7 @@ const actions = {
     const day = findDay(data(), store.ui.dayId);
     const session = finishDay(data(), day.id);
     if (!session) return toast('Check at least one set first');
+    for (const ex of day.exercises) delete store.ui.open[`ex:${ex.id}`]; // next session starts open
     store.ui.dayId = suggestedDayId(data());
     store.commit();
     store.saveUI();

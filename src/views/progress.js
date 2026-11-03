@@ -1,5 +1,5 @@
 import { esc, fmt, shortDate } from '../util.js';
-import { barHeights, liftHistory, weekStats } from '../domain.js';
+import { barHeights, liftHistoryByDay, weekStats } from '../domain.js';
 
 const bars = (values) => `<div class="bars">${barHeights(values).map((h) => `<i style="height:${h}%"></i>`).join('')}</div>`;
 
@@ -22,17 +22,22 @@ function trendCard(title, list, unit, metric) {
     </section>`;
 }
 
-function liftCard(lift, unit) {
+function liftCard(lift, unit, tag) {
   const pts = lift.points;
+  const byReps = pts.every((p) => p.w === null);
+  const val = (p) => (byReps ? p.r : p.w);
+  const u = byReps ? 'reps' : unit;
   const first = pts[0];
   const last = pts.at(-1);
+  const latest = byReps ? `${fmt(last.r)} reps` : `${fmt(last.w)} ${unit}${last.r === null ? '' : ` × ${fmt(last.r)}`}`;
   return `
     <section class="card trend">
-      <div class="trend-top"><h3 style="font-size:18px">${esc(lift.name)}</h3>
-        <span class="val" style="font-size:16px">${fmt(first.w)} → ${fmt(last.w)}<small>${unit}</small></span></div>
-      ${pts.length > 1 ? bars(pts.slice(-8).map((p) => p.w)) : ''}
+      <div class="lift-tag label">${esc(tag)}</div>
+      <div class="trend-top"><h3 style="font-size:16px">${esc(lift.name)}</h3>
+        <span class="val" style="font-size:16px">${fmt(val(first))} → ${fmt(val(last))}<small>${u}</small></span></div>
+      ${pts.length > 1 ? bars(pts.slice(-8).map(val)) : ''}
       <div class="entries" style="${pts.length > 1 ? '' : 'margin-top:8px'}">
-        <span>Latest ${shortDate(last.d)} · <b>${fmt(last.w)} ${unit} × ${fmt(last.r)}</b></span>
+        <span>Latest ${shortDate(last.d)} · <b>${esc(latest)}</b></span>
         <span>${pts.length} session${pts.length === 1 ? '' : 's'}</span>
       </div>
     </section>`;
@@ -42,7 +47,7 @@ export function progressView(data) {
   const { weight, waist } = data.body;
   const unit = data.settings.unit;
   const wUnit = data.settings.waistUnit;
-  const lifts = liftHistory(data);
+  const groups = liftHistoryByDay(data);
   const wk = weekStats(data);
 
   return `
@@ -71,7 +76,9 @@ export function progressView(data) {
       ${trendCard('Waist', waist, wUnit, 'waist')}
 
       <div class="section-h"><h2>Lift history</h2></div>
-      ${lifts.length ? lifts.map((l) => liftCard(l, unit)).join('') :
+      ${groups.length ? groups.map((g) => `
+        <h3 class="lift-group label">${esc(g.label)}</h3>
+        ${g.lifts.map((l) => liftCard(l, unit, g.day ? `Day ${g.day.num}` : g.label)).join('')}`).join('') :
         '<section class="card"><p class="empty" style="color:var(--ink)">Finish a day to log top sets. Each lift will chart here, week to week.</p></section>'}
     </div>`;
 }
