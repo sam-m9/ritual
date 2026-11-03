@@ -24,9 +24,10 @@
 import { SEED_PROGRAM, SEED_MEALS, SEED_PORTIONS } from './seed.js';
 import { clone, today, uid } from './util.js';
 import AUSTIN_PACK from './packs/austin-2026-11.js';
+import AUSTIN_PACK_2 from './packs/austin-2026-11b.js';
 
 /** Content packs shipped with the app, merged once into existing data. */
-const PACKS = [AUSTIN_PACK];
+const PACKS = [AUSTIN_PACK, AUSTIN_PACK_2];
 
 export const SCHEMA = 2;
 const DATA_KEY = 'ritual-v1';
