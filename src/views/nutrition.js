@@ -9,8 +9,12 @@ function grocLabel(name) {
   return `${esc(m[1])}<span class="groc-store label">${esc(m[2])}</span>`;
 }
 
+const RATING = { A: 'Anchor', B: 'Variety', C: 'Backup' };
+
 function recipeMeta(r) {
   const bits = [];
+  const rating = String(r.notes || '').match(/^([ABC]) ·/);
+  if (rating) bits.push(RATING[rating[1]]);
   if (r.protein) bits.push(`${r.protein}g P`);
   if (r.minutes) bits.push(`${r.minutes} min`);
   return bits.join(' · ');

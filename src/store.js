@@ -17,7 +17,7 @@
 //                        breath, effort, pain, where, km, note, easeOff }] },
 //   nutrition: { meals: [{ id, name, portions }], portions: [{ label, value }],
 //                today: { d, done: { [mealId]: true } }, packs: [packId],
-//                recipes: [{ id, cat, title, protein, minutes, ingredients: [], steps: [], url, notes }],
+//                recipes: [{ id, cat (meal|snack|dessert|prep), title, protein, minutes, ingredients: [], steps: [], url, notes }],
 //                groceries: [{ id, name, done }] }
 // }
 
@@ -25,9 +25,10 @@ import { SEED_PROGRAM, SEED_MEALS, SEED_PORTIONS } from './seed.js';
 import { clone, today, uid } from './util.js';
 import AUSTIN_PACK from './packs/austin-2026-11.js';
 import AUSTIN_PACK_2 from './packs/austin-2026-11b.js';
+import AUSTIN_PACK_3 from './packs/austin-2026-11c.js';
 
 /** Content packs shipped with the app, merged once into existing data. */
-const PACKS = [AUSTIN_PACK, AUSTIN_PACK_2];
+const PACKS = [AUSTIN_PACK, AUSTIN_PACK_2, AUSTIN_PACK_3];
 
 export const SCHEMA = 2;
 const DATA_KEY = 'ritual-v1';
@@ -105,7 +106,7 @@ export function migrate(raw) {
  */
 export function mergeRecipes(data, pack) {
   const n = data.nutrition;
-  const cats = new Set(['meal', 'snack', 'dessert']);
+  const cats = new Set(['meal', 'snack', 'dessert', 'prep']);
   const titles = new Set(n.recipes.map((r) => String(r.title).trim().toLowerCase()));
   const names = new Set(n.groceries.map((g) => String(g.name).trim().toLowerCase()));
   const list = (v) => (Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : []);

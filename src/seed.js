@@ -90,6 +90,7 @@ export const RECIPE_CATEGORIES = [
   { id: 'meal', label: 'Meal ideas', single: 'Meal', add: 'Add meal idea' },
   { id: 'snack', label: 'Snack ideas', single: 'Snack', add: 'Add snack idea' },
   { id: 'dessert', label: 'Low-sugar desserts', single: 'Dessert', add: 'Add dessert' },
+  { id: 'prep', label: 'Sauces & prep', single: 'Prep', add: 'Add sauce or prep' },
 ];
 
 export const EFFORT_OPTIONS = ['', '0-1', '1', '1-2', '2', '3', 'FAIL'];

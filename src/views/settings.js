@@ -95,7 +95,7 @@ export function recipeEditorView(draft) {
       <h1>${draft.isNew ? 'New recipe' : 'Edit recipe'}</h1>
     </header>
     <form class="card" data-form="recipe">
-      <div class="seg">
+      <div class="seg" style="grid-template-columns:repeat(${RECIPE_CATEGORIES.length},1fr)">
         ${RECIPE_CATEGORIES.map((c) => `<button type="button" class="${draft.cat === c.id ? 'on' : ''}" data-act="recipe-cat" data-cat="${c.id}">${c.single}</button>`).join('')}
       </div>
       <label class="field-label label" for="r-title">Name</label>
