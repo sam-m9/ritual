@@ -1,6 +1,8 @@
 import { esc, fmt, repLow } from '../util.js';
 import { EQ_ICONS, EQ_LABELS, ICON } from '../icons.js';
-import { dayProgress, findDay, lastEntry, setsFor, topSet } from '../domain.js';
+import { dayProgress, findDay, lastEntry, setsFor, topSet, dayHasActivity } from '../domain.js';
+import { nextSession, totalSec } from '../runplan.js';
+import { today } from '../util.js';
 
 export function effortTag(ex, day) {
   if (day.noRir) return '<span class="tag solid">NO RIR · CHASE THE BURN</span>';
@@ -111,6 +113,22 @@ export function fmtClock(ms) {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
+/** After an upper-body day is logged, nudge toward today's run. */
+function runNextCard(data) {
+  const run = data.run;
+  const last = data.sessions.at(-1);
+  if (!run?.started || !last || last.date !== today()) return '';
+  if (/leg/i.test(last.dayName)) return '';
+  if (run.log.some((r) => r.date === today())) return '';
+  if (data.program.some((d) => dayHasActivity(data, d.id))) return '';
+  const s = nextSession(run);
+  return `
+    <section class="card ink run-next">
+      <div><div class="label">Run next · ${s.easeOff ? 'Ease-off' : `Week ${s.week} · Run ${s.index + 1}`}</div><p>${esc(s.title)} · ${Math.round(totalSec(s) / 60)} min</p></div>
+      <button class="btn orange" data-act="tab" data-tab="run">Go</button>
+    </section>`;
+}
+
 export function trainView(data, ui) {
   const day = findDay(data, ui.dayId);
   const prog = dayProgress(data, day);
@@ -144,6 +162,7 @@ export function trainView(data, ui) {
         <div class="bar"><i style="width:${prog.pct}%"></i></div>
       </section>
       ${banner}
+      ${runNextCard(data)}
       ${day.exercises.length ? `<div class="list-tools"><button data-act="fold-all" data-mode="${day.exercises.some((ex) => isExpanded(ui, ex, setsFor(data, day.id, ex).every((x) => x.c))) ? 'closed' : 'open'}">${day.exercises.some((ex) => isExpanded(ui, ex, setsFor(data, day.id, ex).every((x) => x.c))) ? 'Collapse all' : 'Expand all'}</button></div>` : ''}
       ${day.exercises.map((ex) => exerciseCard(data, ui, day, ex)).join('')}
       ${day.exercises.length ? '' : '<div class="card empty">No exercises on this day yet. Add some in Settings.</div>'}

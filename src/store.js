@@ -12,6 +12,9 @@
 //   sessions:  [{ id, dayId, dayName, date, startedAt, finishedAt,
 //                 exercises: [{ exId, name, sets: [{ w, r }] }] }],                 // every finished workout, every set
 //   body:      { weight: [{ d, v }], waist: [{ d, v }] },
+//   run:       { started, week, index, easeOff, verdict, settings: { voice, beeps, distUnit },
+//                log: [{ id, date, week, index, title, activeSec, plannedSec, longestSec, completed,
+//                        breath, effort, pain, where, km, note, easeOff }] },
 //   nutrition: { meals: [{ id, name, portions }], portions: [{ label, value }],
 //                today: { d, done: { [mealId]: true } },
 //                recipes: [{ id, cat, title, protein, minutes, ingredients: [], steps: [], url, notes }],
@@ -35,6 +38,11 @@ export function defaultData() {
     current: {},
     sessions: [],
     body: { weight: [], waist: [] },
+    run: {
+      started: false, week: 2, index: 0, easeOff: 0, verdict: null,
+      settings: { voice: 'full', beeps: true, distUnit: 'km' },
+      log: [],
+    },
     nutrition: {
       meals: clone(SEED_MEALS),
       portions: clone(SEED_PORTIONS),
@@ -62,6 +70,7 @@ export function migrate(raw) {
     ...raw,
     settings: { ...base.settings, ...(raw.settings || {}) },
     body: { ...base.body, ...(raw.body || {}) },
+    run: { ...base.run, ...(raw.run || {}), settings: { ...base.run.settings, ...(raw.run?.settings || {}) } },
     nutrition: { ...base.nutrition, ...(raw.nutrition || {}) },
   };
   if (!Array.isArray(data.program) || data.program.length === 0) data.program = base.program;

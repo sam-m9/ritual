@@ -6,25 +6,45 @@ import { exportToFile, importFromFile } from './sync.js';
 import { findDay, finishDay, lastEntry, logMetric, setsFor, suggestedDayId } from './domain.js';
 import { EQUIPMENT } from './seed.js';
 import { ICON } from './icons.js';
-import { num, uid } from './util.js';
+import { num, uid, today } from './util.js';
 import { trainView, fmtClock, isExpanded } from './views/train.js';
 import { nutritionView } from './views/nutrition.js';
 import { progressView } from './views/progress.js';
 import { settingsView, recipeEditorView } from './views/settings.js';
+import { runView, runLiveView, runLogView, paintRun } from './views/run.js';
+import { runner } from './runner.js';
+import { nextSession, applyResult, longestRunSec, totalSec } from './runplan.js';
 
 const root = document.getElementById('app');
 const fileInput = document.getElementById('import-file');
 let recipeDraft = null;
+let runDraft = null;
 let toastTimer = null;
 
 store.init();
 // Open on the day in progress, or the next one in the rotation.
 store.ui.dayId = suggestedDayId(store.data);
 
+// A guided run that was in progress when the app closed picks up where it was.
+runner.onTick = paintRun;
+runner.onDone = (result) => {
+  const s = result.session;
+  runDraft = {
+    title: s.title, week: s.week, index: s.index, easeOff: !!s.easeOff,
+    activeSec: result.activeSec, plannedSec: totalSec(s), completed: result.completed,
+    longestSec: result.completed ? longestRunSec(s) : 0,
+    breath: null, effort: null, pain: 0, where: null, km: '', note: '',
+  };
+  store.ui.view = 'run-log';
+  render({ keepScroll: false });
+};
+if (runner.restore()) store.ui.view = 'run-live';
+
 // ---------- render ----------
 
 const TABS = [
   { id: 'train', label: 'Train' },
+  { id: 'run', label: 'Run' },
   { id: 'nutrition', label: 'Nutrition' },
   { id: 'progress', label: 'Progress' },
 ];
@@ -38,11 +58,18 @@ function render({ keepScroll = true } = {}) {
   if (ui.view === 'settings') {
     body = settingsView(data, ui);
     chrome = false;
+  } else if (ui.view === 'run-live' && runner.live) {
+    body = runLiveView();
+    chrome = false;
+  } else if (ui.view === 'run-log' && runDraft) {
+    body = runLogView(runDraft, data.run.settings.distUnit);
+    chrome = false;
   } else if (ui.view === 'recipe' && recipeDraft) {
     body = recipeEditorView(recipeDraft);
     chrome = false;
   } else {
-    const view = ui.tab === 'nutrition' ? nutritionView : ui.tab === 'progress' ? progressView : trainView;
+    const views = { train: trainView, run: runView, nutrition: nutritionView, progress: progressView };
+    const view = views[ui.tab] || trainView;
     body = `
       <header class="topbar">
         <span class="brand">Ritual</span>
@@ -71,6 +98,7 @@ function render({ keepScroll = true } = {}) {
     }
     paintTimer();
   }
+  if (ui.view === 'run-live') paintRun();
 }
 
 // ---------- rest timer ----------
@@ -165,6 +193,89 @@ const actions = {
     store.ui.dayId = el.dataset.day;
     store.saveUI();
     render({ keepScroll: false });
+  },
+
+  // ----- run -----
+  'run-start-week'(el) {
+    Object.assign(data().run, { started: true, week: Number(el.dataset.week), index: 0 });
+    store.commit();
+    render({ keepScroll: false });
+  },
+
+  'run-go'() {
+    const r = data().run;
+    r.verdict = null;
+    store.commit();
+    runner.start(nextSession(r), { detail: r.settings.voice, beeps: r.settings.beeps });
+    store.ui.view = 'run-live';
+    render({ keepScroll: false });
+  },
+
+  'run-pause'() { runner.togglePause(); },
+  'run-skip'() { runner.skip(); },
+
+  'run-end'(el) {
+    if (el.dataset.armed !== '1') {
+      el.dataset.armed = '1';
+      el.textContent = 'Tap again';
+      setTimeout(() => { if (el.isConnected) { el.dataset.armed = ''; el.textContent = 'End'; } }, 3000);
+      return;
+    }
+    runner.finish();
+  },
+
+  'run-pocket'() {
+    document.getElementById('pocket').hidden = false;
+  },
+
+  'rl-pick'(el) {
+    const k = el.dataset.k;
+    const v = k === 'effort' || k === 'pain' ? Number(el.dataset.v) : el.dataset.v;
+    const form = root.querySelector('[data-form="run-log"]');
+    runDraft.km = form.elements.km.value;
+    runDraft.note = form.elements.note.value;
+    runDraft[k] = runDraft[k] === v && k === 'where' ? null : v;
+    render();
+  },
+
+  'rl-discard'(el) {
+    if (el.dataset.armed !== '1') {
+      el.dataset.armed = '1';
+      el.textContent = 'Tap again to discard';
+      return;
+    }
+    runDraft = null;
+    store.ui.view = null;
+    store.ui.tab = 'run';
+    render({ keepScroll: false });
+  },
+
+  'run-ease-clear'() {
+    data().run.easeOff = 0;
+    store.commit();
+    render();
+  },
+
+  'run-week'(el) {
+    const r = data().run;
+    r.week = Math.min(24, Math.max(1, r.week + Number(el.dataset.delta)));
+    r.index = 0;
+    store.commit();
+    render();
+  },
+
+  'run-set'(el) {
+    const r = data().run;
+    r.settings[el.dataset.k] = el.dataset.k === 'beeps' ? el.dataset.v === '1' : el.dataset.v;
+    store.commit();
+    render();
+  },
+
+  'run-test-voice'() {
+    if ('speechSynthesis' in window) {
+      speechSynthesis.cancel();
+      speechSynthesis.speak(new SpeechSynthesisUtterance('Run. A minute and a half. Easy pace. You should be able to talk.'));
+    }
   },
 
   'toggle-ex'(el) {
@@ -381,7 +492,16 @@ const actions = {
   },
 };
 
+let lastPocketTap = 0;
 root.addEventListener('click', (e) => {
+  const pocket = e.target.closest('#pocket');
+  if (pocket) {
+    e.preventDefault();
+    const now = Date.now();
+    if (now - lastPocketTap < 400) pocket.hidden = true;
+    lastPocketTap = now;
+    return;
+  }
   const el = e.target.closest('[data-act]');
   if (!el || el.disabled) return;
   const fn = actions[el.dataset.act];
@@ -436,6 +556,25 @@ root.addEventListener('change', (e) => {
 // ---------- forms ----------
 
 const forms = {
+  'run-log'(form) {
+    if (!runDraft.breath || runDraft.effort === null) return toast('Pick breathing and effort');
+    const entry = {
+      id: uid('run_'), date: today(),
+      ...runDraft,
+      km: num(form.elements.km.value),
+      note: form.elements.note.value.trim(),
+    };
+    const r = data().run;
+    r.log.push(entry);
+    r.verdict = { ...applyResult(r, entry), date: today() };
+    runDraft = null;
+    store.ui.view = null;
+    store.ui.tab = 'run';
+    store.commit();
+    store.saveUI();
+    render({ keepScroll: false });
+  },
+
   'add-groc'(form) {
     const input = form.elements.item;
     const added = addGroceries([input.value]);
@@ -512,4 +651,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 }
 
 // Exposed for debugging from the console only.
-window.ritual = { store };
+window.ritual = { store, runner };

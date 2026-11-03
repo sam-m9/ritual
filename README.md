@@ -5,6 +5,10 @@ A personal, phone-first training and nutrition log. You add it to your iPhone Ho
 ## What it does
 
 - **Train**: a 4-day program (Upper A, Legs, Upper B + leg top-up, Upper C, plus an optional Pump day). For every set you get weight and reps fields and a check box. "Last time" shows what you lifted before. Checking a blank set fills it from last time. A day is finished by "Finish & log" (or "Finish early"). The app then opens on the **next day in the rotation**, so a missed gym day never breaks the order. The optional Pump day is skipped in the rotation; tap its pill when you want it.
+- **Run**: a guided plan from about 1–3 minutes of running to 30 minutes non-stop (Foundation, weeks 1–9), then a 5K block (weeks 10–14) and a 10K block (weeks 15–24). Every session is time-based run-walk at talking pace. A full-screen guided timer speaks cues over your music ("Run. A minute and a half. Easy pace…"), with countdown beeps and a black pocket screen. After each run you log breathing, effort and pain, and the plan adapts:
+  - good run: next session
+  - gasping, effort 8+ or stopped early: repeat the session
+  - pain above 3/10: 3 gentle ease-off sessions, then back to where you were
 - **Nutrition**: protein target, a 4-meal checklist that resets each day, hand-portion guide, a cookbook (meal ideas, snacks, low-sugar desserts with ingredients, steps, protein and time), and a grocery staples list. "+ Groceries" on a recipe adds its ingredients to that list.
 - **Progress**: one-tap bodyweight and waist logging, trend bars, sessions this week and in total, and per-lift history built from every finished session.
 - **Settings**: edit the program (exercises, sets, reps, effort, equipment, video links), set the protein target, export or import JSON, and reset.
@@ -68,6 +72,8 @@ src/store.js          the data document: defaults, migrations, persistence, chan
 src/sync.js           where data can live: file export/import now, Google Drive plan
 src/domain.js         pure training logic: progress, rotation, finishing a day, history
 src/seed.js           starting program and nutrition templates
+src/runplan.js        24-week running plan, coaching notes, how a logged run moves the plan
+src/runner.js         guided-run engine: wall-clock timing, voice + beep cues, wake lock
 src/views/*.js        one file per screen, each returns HTML
 ```
 
@@ -85,3 +91,16 @@ src/views/*.js        one file per screen, each returns HTML
 - Protein tally per meal using the cookbook's protein numbers; a "what can I make" filter based on grocery staples.
 - Weekly review card: sessions kept, bodyweight and waist trend, lifts that went up.
 - Progress photos (stored in Drive, not on the phone).
+
+## Running: how it works and why
+
+- **iPhone limit:** a home-screen web app stops running code while the phone is locked, so the screen stays on during a run (wake lock) and you can switch to a black pocket screen. Voice cues use the phone's built-in speech and play over music. Keep the ringer on and Ritual open.
+- **Timing comes from the clock, not a counter.** If iOS pauses the app, it catches up and re-announces the current segment. Closing the app mid-run resumes the run on reopen.
+- **Principles:** run-walk progression in minutes, talking-pace effort, 3 runs a week, repeat sessions freely, long runs grow no more than about 10% over your longest run of the past month, a pain rule (more than 3/10 means ease off), and strength work for injury resistance.
+- **Sources:**
+  - [NHS Couch to 5K](https://www.nhs.uk/better-health/get-active/get-running-with-couch-to-5k/couch-to-5k-running-plan/)
+  - [Runna beginner plans (2026)](https://www.runna.com/press/runna-introduces-updated-beginner-running-plans-for-2026)
+  - [Garmin-RUNSAFE study on single-run spikes](https://health.medarbejdere.au.dk/en/display/artikel/everything-we-thought-about-running-injury-development-was-wrong-study-shows)
+  - [GRONORUN trial on the 10% rule](https://research.rug.nl/en/publications/no-effect-of-a-graded-training-program-on-the-number-of-running-r/)
+  - [Heiderscheit 2011, step rate and joint loading](https://uwnmbl.engr.wisc.edu/pubs/acsm10.pdf)
+  - [Lauersen 2014, strength vs stretching](https://bjsm.bmj.com/content/48/11/871)
