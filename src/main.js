@@ -11,7 +11,7 @@ import { trainView, fmtClock, isExpanded } from './views/train.js';
 import { nutritionView } from './views/nutrition.js';
 import { progressView } from './views/progress.js';
 import { settingsView, recipeEditorView } from './views/settings.js';
-import { runView, runLiveView, runLogView, paintRun } from './views/run.js';
+import { runView, runLiveView, runLogView, runPlanView, runLevelView, paintRun } from './views/run.js';
 import { runner } from './runner.js';
 import { nextSession, applyResult, longestRunSec, totalSec } from './runplan.js';
 
@@ -38,7 +38,10 @@ runner.onDone = (result) => {
   store.ui.view = 'run-log';
   render({ keepScroll: false });
 };
-if (runner.restore()) store.ui.view = 'run-live';
+if (runner.restore()) {
+  store.ui.view = 'run-live';
+  history.pushState({ guard: true }, '');
+}
 
 // ---------- render ----------
 
@@ -63,6 +66,12 @@ function render({ keepScroll = true } = {}) {
     chrome = false;
   } else if (ui.view === 'run-log' && runDraft) {
     body = runLogView(runDraft, data.run.settings.distUnit);
+    chrome = false;
+  } else if (ui.view === 'run-plan') {
+    body = runPlanView(data);
+    chrome = false;
+  } else if (ui.view === 'run-level') {
+    body = runLevelView(data);
     chrome = false;
   } else if (ui.view === 'recipe' && recipeDraft) {
     body = recipeEditorView(recipeDraft);
@@ -99,6 +108,9 @@ function render({ keepScroll = true } = {}) {
     paintTimer();
   }
   if (ui.view === 'run-live') paintRun();
+  if (ui.view === 'run-plan' && !keepScroll) {
+    root.querySelector('.plan-week.current')?.scrollIntoView({ block: 'center' });
+  }
 }
 
 // ---------- rest timer ----------
@@ -120,16 +132,75 @@ function paintTimer() {
 
 setInterval(() => { if (store.ui.timer?.start) paintTimer(); }, 250);
 
-function toast(message) {
+function toast(message, action) {
   document.querySelector('.toast')?.remove();
   const el = document.createElement('div');
   el.className = 'toast';
   el.setAttribute('role', 'status');
   el.textContent = message;
+  if (action) {
+    const btn = document.createElement('button');
+    btn.className = 'toast-act';
+    btn.textContent = action.label;
+    btn.addEventListener('click', () => { el.remove(); action.fn(); });
+    el.appendChild(btn);
+  }
   document.body.appendChild(el);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.remove(), 2200);
+  toastTimer = setTimeout(() => el.remove(), action ? 5000 : 2200);
 }
+
+/**
+ * Run a change with a 5-second Undo. Snapshots the whole document (it's small),
+ * so undo is exact no matter what the change touched.
+ */
+function withUndo(message, change) {
+  const snap = JSON.parse(JSON.stringify(store.data));
+  const uiSnap = { dayId: store.ui.dayId, open: { ...store.ui.open } };
+  if (change() === false) return;
+  toast(message, {
+    label: 'Undo',
+    fn: () => {
+      store.data = snap;
+      Object.assign(store.ui, uiSnap);
+      store.commit();
+      store.saveUI();
+      render();
+      toast('Undone');
+    },
+  });
+}
+
+// ---------- sheets (full-screen pages with ← Back) ----------
+// Each sheet adds a history entry, so the phone's back gesture closes it too.
+
+const SHEETS = new Set(['settings', 'recipe', 'run-plan', 'run-level']);
+
+function openSheet(view) {
+  store.ui.view = view;
+  if (!history.state?.sheet) history.pushState({ sheet: view }, '');
+  render({ keepScroll: false });
+}
+
+function closeSheet() {
+  store.ui.view = null;
+  store.ui.resetArmed = false;
+  recipeDraft = null;
+  render({ keepScroll: false });
+}
+
+function leaveSheet() {
+  if (history.state?.sheet) history.back(); // popstate closes it
+  else closeSheet();
+}
+
+window.addEventListener('popstate', () => {
+  if (SHEETS.has(store.ui.view)) closeSheet();
+  else if (store.ui.view === 'run-live' || store.ui.view === 'run-log') {
+    // Never lose a run to a stray back swipe.
+    history.pushState({ guard: true }, '');
+  }
+});
 
 // ---------- helpers ----------
 
@@ -169,6 +240,10 @@ function addGroceries(names) {
 
 const actions = {
   tab(el) {
+    if (store.ui.tab === el.dataset.tab && !store.ui.view) {
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // tap the active tab: back to top
+      return;
+    }
     store.ui.tab = el.dataset.tab;
     store.ui.resetArmed = false;
     store.saveUI();
@@ -176,16 +251,12 @@ const actions = {
   },
 
   'open-settings'() {
-    store.ui.view = 'settings';
     store.ui.editDayId = store.ui.dayId;
-    render({ keepScroll: false });
+    openSheet('settings');
   },
 
   'close-view'() {
-    store.ui.view = null;
-    store.ui.resetArmed = false;
-    recipeDraft = null;
-    render({ keepScroll: false });
+    leaveSheet();
   },
 
   // ----- train -----
@@ -197,10 +268,19 @@ const actions = {
 
   // ----- run -----
   'run-start-week'(el) {
-    Object.assign(data().run, { started: true, week: Number(el.dataset.week), index: 0 });
-    store.commit();
-    render({ keepScroll: false });
+    const week = Number(el.dataset.week);
+    const wasStarted = data().run.started;
+    const apply = () => {
+      Object.assign(data().run, { started: true, week, index: 0 });
+      store.commit();
+    };
+    if (!wasStarted) { apply(); return render({ keepScroll: false }); }
+    withUndo(`Starting from week ${week}`, apply);
+    if (store.ui.view) leaveSheet(); else render({ keepScroll: false });
   },
+
+  'run-plan'() { openSheet('run-plan'); },
+  'run-level'() { openSheet('run-level'); },
 
   'run-go'() {
     const r = data().run;
@@ -208,6 +288,7 @@ const actions = {
     store.commit();
     runner.start(nextSession(r), { detail: r.settings.voice, beeps: r.settings.beeps });
     store.ui.view = 'run-live';
+    history.pushState({ guard: true }, ''); // a back swipe can't drop you out of a run
     render({ keepScroll: false });
   },
 
@@ -258,9 +339,13 @@ const actions = {
 
   'run-week'(el) {
     const r = data().run;
-    r.week = Math.min(24, Math.max(1, r.week + Number(el.dataset.delta)));
-    r.index = 0;
-    store.commit();
+    const week = Math.min(24, Math.max(1, r.week + Number(el.dataset.delta)));
+    if (week === r.week) return;
+    withUndo(`Moved to week ${week}`, () => {
+      r.week = week;
+      r.index = 0;
+      store.commit();
+    });
     render();
   },
 
@@ -339,14 +424,17 @@ const actions = {
 
   finish() {
     const day = findDay(data(), store.ui.dayId);
-    const session = finishDay(data(), day.id);
-    if (!session) return toast('Check at least one set first');
-    for (const ex of day.exercises) delete store.ui.open[`ex:${ex.id}`]; // next session starts open
-    store.ui.dayId = suggestedDayId(data());
-    store.commit();
-    store.saveUI();
+    if (!data().current[day.id] || !Object.values(data().current[day.id].sets).some((l) => l.some((x) => x.c))) {
+      return toast('Check at least one set first');
+    }
+    withUndo(`${day.name} logged`, () => {
+      finishDay(data(), day.id);
+      for (const ex of day.exercises) delete store.ui.open[`ex:${ex.id}`]; // next session starts open
+      store.ui.dayId = suggestedDayId(data());
+      store.commit();
+      store.saveUI();
+    });
     render({ keepScroll: false });
-    toast(`${day.name} logged · next up ${findDay(data(), store.ui.dayId).name}`);
   },
 
   // ----- nutrition -----
@@ -375,8 +463,11 @@ const actions = {
 
   'remove-groc'(el) {
     const n = data().nutrition;
-    n.groceries = n.groceries.filter((x) => x.id !== el.dataset.id);
-    store.commit();
+    const g = n.groceries.find((x) => x.id === el.dataset.id);
+    withUndo(`Removed ${g?.name.replace(/\s*\(.*\)$/, '') || 'item'}`, () => {
+      n.groceries = n.groceries.filter((x) => x.id !== el.dataset.id);
+      store.commit();
+    });
     render();
   },
 
@@ -388,16 +479,14 @@ const actions = {
 
   'new-recipe'(el) {
     recipeDraft = { isNew: true, id: uid('r_'), cat: el.dataset.cat, title: '', protein: '', minutes: '', ingredients: [], steps: [], url: '', notes: '' };
-    store.ui.view = 'recipe';
-    render({ keepScroll: false });
+    openSheet('recipe');
   },
 
   'edit-recipe'(el) {
     const r = data().nutrition.recipes.find((x) => x.id === el.dataset.id);
     if (!r) return;
     recipeDraft = { ...JSON.parse(JSON.stringify(r)), isNew: false };
-    store.ui.view = 'recipe';
-    render({ keepScroll: false });
+    openSheet('recipe');
   },
 
   'recipe-cat'(el) {
@@ -413,10 +502,13 @@ const actions = {
       return render();
     }
     const n = data().nutrition;
-    n.recipes = n.recipes.filter((r) => r.id !== recipeDraft.id);
-    store.commit();
-    actions['close-view']();
-    toast('Recipe deleted');
+    const id = recipeDraft.id;
+    leaveSheet();
+    withUndo('Recipe deleted', () => {
+      n.recipes = n.recipes.filter((r) => r.id !== id);
+      store.commit();
+    });
+    render();
   },
 
   'recipe-to-groc'(el) {
@@ -431,8 +523,10 @@ const actions = {
   // ----- progress -----
   'undo-metric'(el) {
     const list = data().body[el.dataset.metric];
-    list.pop();
-    store.commit();
+    withUndo('Entry removed', () => {
+      list.pop();
+      store.commit();
+    });
     render();
   },
 
@@ -452,8 +546,11 @@ const actions = {
 
   'remove-ex'(el) {
     const day = dayById(el.dataset.day);
-    day.exercises = day.exercises.filter((e) => e.id !== el.dataset.ex);
-    store.commit();
+    const ex = day.exercises.find((e) => e.id === el.dataset.ex);
+    withUndo(`Removed ${ex?.name || 'exercise'}`, () => {
+      day.exercises = day.exercises.filter((e) => e.id !== el.dataset.ex);
+      store.commit();
+    });
     render();
   },
 
@@ -621,12 +718,10 @@ const forms = {
     const i = list.findIndex((r) => r.id === recipe.id);
     if (i >= 0) list[i] = recipe; else list.push(recipe);
     store.ui.open[`sec:${recipe.cat}`] = true;
+    store.ui.tab = 'nutrition';
     store.commit();
     store.saveUI();
-    recipeDraft = null;
-    store.ui.view = null;
-    store.ui.tab = 'nutrition';
-    render({ keepScroll: false });
+    leaveSheet();
     toast('Saved');
   },
 };

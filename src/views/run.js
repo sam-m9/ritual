@@ -1,7 +1,7 @@
 import { esc, shortDate, today, weekStart } from '../util.js';
 import { ICON } from '../icons.js';
 import {
-  LEARN, PHASES, LAST_WEEK, START_OPTIONS, nextSession, phaseOf, totalSec, weekOf, longestRunSec,
+  LEARN, PHASES, PLAN, LAST_WEEK, START_OPTIONS, nextSession, phaseOf, totalSec, weekOf, longestRunSec,
 } from '../runplan.js';
 import { runner, segLabel } from '../runner.js';
 
@@ -29,11 +29,11 @@ function stats(run) {
 function onboarding(run) {
   return `
     <section class="card">
-      <div class="label" style="color:var(--muted)">Let’s find your starting week</div>
+      <div class="label" style="color:var(--muted)">${run.started ? `Currently week ${run.week}` : 'Let’s find your starting week'}</div>
       <h2 class="run-q">How long can you run without stopping right now?</h2>
       <div class="stack" style="gap:8px;margin-top:14px">
         ${START_OPTIONS.map((o) => `
-          <button class="opt" data-act="run-start-week" data-week="${o.week}">
+          <button class="opt ${run.started && run.week === o.week ? 'on' : ''}" data-act="run-start-week" data-week="${o.week}">
             <span>${esc(o.label)}</span><span class="label">Week ${o.week}</span>
           </button>`).join('')}
       </div>
@@ -121,18 +121,23 @@ export function runView(data, ui) {
         <p class="run-hint">Screen stays on during the run; there’s a black pocket screen. Voice cues talk over your music.</p>
       </section>
 
+      <div class="run-links">
+        <button data-act="run-plan">Full plan</button>
+        <button data-act="run-level">Change level</button>
+      </div>
+
       <div class="stats">
         <div class="card"><div class="label">This week</div><div class="big">${st.thisWeek}<small> / 3</small></div></div>
         <div class="card"><div class="label">Longest run</div><div class="big">${st.longest ? mmss(st.longest) : '—'}</div></div>
       </div>
 
-      <div class="section-h"><h2>Week ${run.week}</h2><span class="count">${esc(wk.focus)}</span></div>
+      <button class="section-h section-link" data-act="run-plan"><h2>Week ${run.week}</h2><span class="count">${esc(wk.focus)} ›</span></button>
       <section class="card"><ul class="wk-list">${weekRuns}</ul>
         <p class="fine" style="margin-top:10px">Best after Day 1, 3 and 4. Not after Legs. Leave a day between runs when you can.</p>
       </section>
 
-      <div class="section-h"><h2>Journey</h2><span class="count">${run.week} / ${LAST_WEEK} wk</span></div>
-      <section class="card"><div class="journey">${journey}</div></section>
+      <button class="section-h section-link" data-act="run-plan"><h2>Journey</h2><span class="count">${run.week} / ${LAST_WEEK} wk ›</span></button>
+      <button class="card journey-card" data-act="run-plan" aria-label="See full plan"><div class="journey">${journey}</div></button>
 
       <div class="section-h"><h2>Coach notes</h2></div>
       <section class="card stack" style="gap:8px">${learn}</section>
@@ -267,4 +272,44 @@ export function runLogView(draft, distUnit) {
       <button class="btn block" type="submit">Save run</button>
       <button class="btn block ghost" type="button" data-act="rl-discard">Discard</button>
     </form>`;
+}
+
+const sheetHead = (title) => `
+  <header class="topbar sheet-h">
+    <button class="back-pill" data-act="close-view">← BACK</button>
+    <h1>${esc(title)}</h1>
+  </header>`;
+
+/** Every week of the plan; start from any of them. */
+export function runPlanView(data) {
+  const run = data.run;
+  const phases = PHASES.map((p) => {
+    const weeks = PLAN.filter((w) => w.week >= p.from && w.week <= p.to).map((w) => {
+      const current = run.started && w.week === run.week;
+      const past = run.started && w.week < run.week;
+      return `
+        <section class="card plan-week ${current ? 'current' : ''} ${past ? 'past' : ''}">
+          <div class="plan-week-h">
+            <div><div class="label">Week ${w.week}${current ? ' · you are here' : past ? ' · done' : ''}</div><h3>${esc(w.focus)}</h3></div>
+            ${current ? '' : `<button class="btn ${past ? 'ghost' : ''}" data-act="run-start-week" data-week="${w.week}">${past ? 'Redo' : 'Start here'}</button>`}
+          </div>
+          <ol class="plan-runs">${w.runs.map((r, i) => `
+            <li class="${current && i < run.index ? 'done' : ''}"><span>${esc(r.title)}</span><span class="label">${Math.round(totalSec(r) / 60)} min</span></li>`).join('')}
+          </ol>
+        </section>`;
+    }).join('');
+    return `
+      <div class="section-h"><h2>${esc(p.name)}</h2><span class="count">Weeks ${p.from}–${p.to} · ${esc(p.goal)}</span></div>
+      ${weeks}`;
+  }).join('');
+  return `${sheetHead('Run plan')}
+    <div class="stack">
+      <p class="fine" style="padding:0 4px">3 runs a week, each with a 5-minute walk to warm up and cool down. Repeating a week is normal. Jumping ahead is fine if it feels easy.</p>
+      ${phases}
+    </div>`;
+}
+
+/** Re-pick your level at any time. */
+export function runLevelView(data) {
+  return `${sheetHead('Change level')}<div class="stack">${onboarding(data.run)}</div>`;
 }
