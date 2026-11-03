@@ -6,7 +6,7 @@
 // Document shape (schema 2):
 // {
 //   app: 'ritual', schema: 1, updatedAt: ISO string,
-//   settings:  { unit: 'lb', waistUnit: 'in', proteinMin, proteinMax },
+//   settings:  { unit: 'lb', waistUnit: 'in', proteinMin, proteinMax, restSeconds },
 //   program:   [{ id, num, name, focus, note, optional, noRir, exercises: [{ id, name, sets, reps, effort, eq, url }] }],
 //   current:   { [dayId]: { startedAt, sets: { [exerciseId]: [{ w, r, c }] } } },   // in-progress workout
 //   sessions:  [{ id, dayId, dayName, date, startedAt, finishedAt,
@@ -30,7 +30,7 @@ export function defaultData() {
     app: 'ritual',
     schema: SCHEMA,
     updatedAt: new Date().toISOString(),
-    settings: { unit: 'lb', waistUnit: 'in', proteinMin: 170, proteinMax: 190 },
+    settings: { unit: 'lb', waistUnit: 'in', proteinMin: 170, proteinMax: 190, restSeconds: 60 },
     program: clone(SEED_PROGRAM),
     current: {},
     sessions: [],
@@ -119,7 +119,8 @@ export const store = {
       view: null,        // null | 'settings' | 'recipe'
       dayId: null,
       editDayId: null,
-      open: {},          // collapsible sections + expanded recipes
+      open: {},          // collapsible sections, expanded recipes, re-opened finished exercises
+      timer: { start: null, acc: 0 }, // rest stopwatch: running since `start` (ms), plus banked `acc` ms
       ...(readJSON(UI_KEY) || {}),
     };
     this.ui.view = null; // always reopen on a main tab
@@ -144,11 +145,16 @@ export const store = {
 
   persist() {
     writeJSON(DATA_KEY, this.data);
-    writeJSON(UI_KEY, { tab: this.ui.tab, dayId: this.ui.dayId, editDayId: this.ui.editDayId, open: this.ui.open });
+    writeJSON(UI_KEY, this.uiSnapshot());
+  },
+
+  uiSnapshot() {
+    const { tab, dayId, editDayId, open, timer } = this.ui;
+    return { tab, dayId, editDayId, open, timer };
   },
 
   saveUI() {
-    writeJSON(UI_KEY, { tab: this.ui.tab, dayId: this.ui.dayId, editDayId: this.ui.editDayId, open: this.ui.open });
+    writeJSON(UI_KEY, this.uiSnapshot());
   },
 
   /** Replace the whole document (import, cloud pull). */

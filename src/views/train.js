@@ -23,17 +23,38 @@ function lastLine(data, ex) {
   return `${fmt(top.w)} ${unit} × ${fmt(top.r)}`;
 }
 
-function exerciseCard(data, day, ex) {
+function exerciseCard(data, ui, day, ex) {
   const sets = setsFor(data, day.id, ex);
   const done = sets.every((s) => s.c);
+  const expanded = !done || !!ui.open[`ex:${ex.id}`];
   const fail = ex.effort === 'FAIL' && !day.noRir;
+  const unit = data.settings.unit;
+
+  const head = `
+    <div class="ex-head">
+      <div class="eq-tile" title="${EQ_LABELS[ex.eq] || ''}">${EQ_ICONS[ex.eq] || ''}</div>
+      <div class="ex-title">
+        <h3 class="ex-name">${esc(ex.name)}</h3>
+        ${done
+          ? `<div class="ex-sum label">${sets.length}/${sets.length} sets done${doneSummary(sets, unit) ? ` · <b>${esc(doneSummary(sets, unit))}</b>` : ''}</div>`
+          : `<div class="ex-rx"><span class="rx">${esc(ex.sets)} × ${esc(ex.reps)}</span>${effortTag(ex, day)}</div>`}
+      </div>
+      ${done
+        ? `<button class="chev ${expanded ? 'up' : ''}" data-act="toggle-ex" data-ex="${ex.id}" aria-expanded="${expanded}" aria-label="${expanded ? 'Hide' : 'Show'} sets">${ICON.chevron}</button>`
+        : `<button class="play" data-act="video" data-url="${esc(videoUrl(ex))}" aria-label="${ex.url ? 'Watch form video' : 'Search form videos'}">${ICON.play}</button>`}
+    </div>`;
+
+  if (!expanded) {
+    return `<article class="ex-card done collapsed" data-act="toggle-ex" data-ex="${ex.id}">${head}</article>`;
+  }
+
   const rows = sets.map((s, i) => `
     <div class="set-row">
       <div class="set-n">${i + 1}${fail && i === sets.length - 1 ? '<small>FAIL</small>' : ''}</div>
-      <input class="num" inputmode="decimal" enterkeyhint="next" placeholder="${esc(data.settings.unit)}"
+      <input class="num" inputmode="decimal" enterkeyhint="next" placeholder="${esc(unit)}"
         aria-label="Set ${i + 1} weight" value="${esc(s.w)}" data-in="set" data-field="w" data-ex="${ex.id}" data-i="${i}">
       <span class="x">×</span>
-      <input class="num" inputmode="numeric" enterkeyhint="done" placeholder="${esc(ex.reps.replace(/\s.*$/, '') || repLow(ex.reps))}"
+      <input class="num" inputmode="numeric" enterkeyhint="done" placeholder="${esc(String(ex.reps).replace(/\s.*$/, '') || repLow(ex.reps))}"
         aria-label="Set ${i + 1} reps" value="${esc(s.r)}" data-in="set" data-field="r" data-ex="${ex.id}" data-i="${i}">
       <button class="check ${s.c ? 'on' : ''}" data-act="toggle-set" data-ex="${ex.id}" data-i="${i}"
         aria-label="Set ${i + 1} done" aria-pressed="${s.c}">${ICON.check}</button>
@@ -41,18 +62,42 @@ function exerciseCard(data, day, ex) {
 
   return `
   <article class="ex-card ${done ? 'done' : ''}">
-    <div class="ex-head">
-      <div class="eq-tile" title="${EQ_LABELS[ex.eq] || ''}">${EQ_ICONS[ex.eq] || ''}</div>
-      <div class="ex-title">
-        <h3 class="ex-name">${esc(ex.name)}</h3>
-        <div class="ex-rx"><span class="rx">${esc(ex.sets)} × ${esc(ex.reps)}</span>${effortTag(ex, day)}</div>
-      </div>
-      <button class="play" data-act="video" data-url="${esc(videoUrl(ex))}" aria-label="${ex.url ? 'Watch form video' : 'Search form videos'}">${ICON.play}</button>
-    </div>
+    ${head}
     <div class="last label">Last time · <b>${esc(lastLine(data, ex))}</b></div>
     ${rows}
-    ${done ? '<div class="done-l label">Done ✓</div>' : ''}
   </article>`;
+}
+
+/** "55 lb × 9" for a finished exercise: its heaviest set. */
+function doneSummary(sets, unit) {
+  const top = topSet(sets.map((s) => ({ w: s.w === '' ? null : Number(s.w), r: s.r === '' ? null : Number(s.r) })));
+  if (!top) return '';
+  if (top.w === null) return top.r === null ? '' : `${fmt(top.r)} reps`;
+  return `${fmt(top.w)} ${unit}${top.r === null ? '' : ` × ${fmt(top.r)}`}`;
+}
+
+/** Compact rest stopwatch. Ticks are painted by main.js without re-rendering the page. */
+export function restTimer(ui, target) {
+  const running = !!ui.timer?.start;
+  const hasTime = running || (ui.timer?.acc || 0) > 0;
+  return `
+    <section class="rest ${running ? 'running' : ''}" id="rest" data-target="${target}">
+      <div class="rest-main">
+        <span class="rest-label label">Rest</span>
+        <span class="rest-clock" id="rest-clock">0:00</span>
+        <span class="rest-goal label">/ ${fmtClock(target * 1000)}</span>
+      </div>
+      <div class="rest-actions">
+        ${hasTime ? `<button class="rest-btn ghost" data-act="timer-reset">${running ? 'Restart' : 'Reset'}</button>` : ''}
+        <button class="rest-btn" data-act="timer-toggle">${running ? 'Stop' : 'Start'}</button>
+      </div>
+      <div class="rest-line"><i id="rest-line"></i></div>
+    </section>`;
+}
+
+export function fmtClock(ms) {
+  const total = Math.floor(ms / 1000);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
 export function trainView(data, ui) {
@@ -74,6 +119,7 @@ export function trainView(data, ui) {
     <div class="finish-early"><button data-act="finish">Finish early &amp; log ${prog.done} set${prog.done === 1 ? '' : 's'}</button></div>` : '';
 
   return `
+    ${restTimer(ui, data.settings.restSeconds || 60)}
     <nav class="pill-row" aria-label="Training days">${pills}</nav>
     <header class="day-head">
       <span class="day-badge">Day ${day.num}</span>
@@ -87,7 +133,7 @@ export function trainView(data, ui) {
         <div class="bar"><i style="width:${prog.pct}%"></i></div>
       </section>
       ${banner}
-      ${day.exercises.map((ex) => exerciseCard(data, day, ex)).join('')}
+      ${day.exercises.map((ex) => exerciseCard(data, ui, day, ex)).join('')}
       ${day.exercises.length ? '' : '<div class="card empty">No exercises on this day yet. Add some in Settings.</div>'}
       ${early}
     </div>`;

@@ -7,7 +7,7 @@ import { findDay, finishDay, lastEntry, logMetric, setsFor, suggestedDayId } fro
 import { EQUIPMENT } from './seed.js';
 import { ICON } from './icons.js';
 import { num, uid } from './util.js';
-import { trainView } from './views/train.js';
+import { trainView, fmtClock } from './views/train.js';
 import { nutritionView } from './views/nutrition.js';
 import { progressView } from './views/progress.js';
 import { settingsView, recipeEditorView } from './views/settings.js';
@@ -60,10 +60,37 @@ function render({ keepScroll = true } = {}) {
   window.scrollTo(0, keepScroll ? y : 0);
 
   if (ui.tab === 'train' && !ui.view) {
-    const active = root.querySelector('.pill.on');
-    active?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    // Bring the selected day pill into view horizontally only; never move the page.
+    const row = root.querySelector('.pill-row');
+    const active = row?.querySelector('.pill.on');
+    if (row && active) {
+      const left = active.offsetLeft - row.offsetLeft;
+      if (left < row.scrollLeft || left + active.offsetWidth > row.scrollLeft + row.clientWidth) {
+        row.scrollLeft = left - 20;
+      }
+    }
+    paintTimer();
   }
 }
+
+// ---------- rest timer ----------
+
+function timerElapsed() {
+  const t = store.ui.timer || { start: null, acc: 0 };
+  return (t.acc || 0) + (t.start ? Date.now() - t.start : 0);
+}
+
+function paintTimer() {
+  const el = document.getElementById('rest');
+  if (!el) return;
+  const ms = timerElapsed();
+  const target = Number(el.dataset.target) * 1000;
+  document.getElementById('rest-clock').textContent = fmtClock(ms);
+  document.getElementById('rest-line').style.width = `${Math.min(100, (ms / target) * 100)}%`;
+  el.classList.toggle('over', ms >= target);
+}
+
+setInterval(() => { if (store.ui.timer?.start) paintTimer(); }, 250);
 
 function toast(message) {
   document.querySelector('.toast')?.remove();
@@ -140,6 +167,29 @@ const actions = {
     render({ keepScroll: false });
   },
 
+  'toggle-ex'(el) {
+    const k = `ex:${el.dataset.ex}`;
+    store.ui.open[k] = !store.ui.open[k];
+    store.saveUI();
+    render();
+  },
+
+  'timer-toggle'() {
+    const t = (store.ui.timer ||= { start: null, acc: 0 });
+    if (t.start) { t.acc += Date.now() - t.start; t.start = null; }
+    else t.start = Date.now();
+    store.saveUI();
+    render();
+  },
+
+  'timer-reset'() {
+    const t = (store.ui.timer ||= { start: null, acc: 0 });
+    t.acc = 0;
+    t.start = t.start ? Date.now() : null; // "Restart" keeps it running from zero
+    store.saveUI();
+    render();
+  },
+
   'toggle-set'(el) {
     const dayId = store.ui.dayId;
     const ex = exById(dayId, el.dataset.ex);
@@ -158,6 +208,8 @@ const actions = {
       const cur = data().current[dayId];
       cur.startedAt ||= new Date().toISOString();
     }
+    // Finishing the last set folds the exercise away.
+    if (sets.every((x) => x.c)) delete store.ui.open[`ex:${ex.id}`];
     store.commit();
     render();
   },

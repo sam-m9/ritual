@@ -253,6 +253,42 @@ select.field { appearance: none; -webkit-appearance: none; }
 .finish-early { text-align: center; }
 .finish-early button { font-family: var(--mono); font-weight: 600; font-size: 11px; text-decoration: underline; text-underline-offset: 3px; padding: 12px; }
 
+/* Finished exercise, folded away */
+.ex-card.collapsed { padding: 12px 14px; cursor: pointer; }
+.ex-card.collapsed .eq-tile { width: 34px; height: 34px; border-radius: 10px; }
+.ex-card.collapsed .eq-tile svg { width: 20px; height: 20px; }
+.ex-card.collapsed .ex-name { font-size: 15px; }
+.ex-sum { margin-top: 3px; font-size: 9.5px; color: var(--muted); }
+.ex-sum b { color: var(--ink); font-weight: 600; letter-spacing: 0.02em; }
+.chev { flex: none; width: 44px; height: 44px; margin: -6px -6px -6px 0; display: grid; place-items: center; }
+.chev svg { width: 20px; height: 20px; transition: transform .2s ease; }
+.chev.up svg { transform: rotate(180deg); }
+
+/* Rest stopwatch: a slim strip that sticks to the top while you scroll */
+.rest {
+  position: sticky; z-index: 8; top: calc(var(--safe-top) + 8px);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--white); border-radius: 16px; padding: 8px 8px 8px 16px; margin-bottom: 16px;
+  overflow: hidden; box-shadow: 0 0 0 8px var(--field); /* orange collar hides cards scrolling under it */
+}
+.rest-main { display: flex; align-items: baseline; gap: 8px; }
+.rest-label { color: var(--muted); }
+.rest-clock { font-family: var(--mono); font-weight: 600; font-size: 22px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; min-width: 3.2ch; }
+.rest-goal { color: var(--hint); }
+.rest-actions { display: flex; gap: 6px; }
+.rest-btn {
+  height: 36px; min-width: 64px; padding: 0 14px; border-radius: 11px;
+  background: var(--ink); color: var(--card); font-weight: 800; font-size: 12.5px; letter-spacing: 0.04em;
+}
+.rest-btn.ghost { background: var(--tile); color: var(--ink); min-width: 0; }
+.rest-line { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--track); }
+.rest-line i { display: block; height: 100%; width: 0; background: var(--ink); transition: width .25s linear; }
+.rest.over { background: var(--ink); color: var(--card); }
+.rest.over .rest-label, .rest.over .rest-goal { color: var(--tile); }
+.rest.over .rest-btn { background: var(--field); color: var(--ink); }
+.rest.over .rest-btn.ghost { background: rgba(255, 247, 240, 0.14); color: var(--card); }
+.rest.over .rest-line i { background: var(--field); }
+
 /* ---------- nutrition ---------- */
 .target { padding: 20px; }
 .target .label { color: var(--tile); opacity: 0.8; }

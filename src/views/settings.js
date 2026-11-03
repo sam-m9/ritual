@@ -54,6 +54,12 @@ export function settingsView(data, ui) {
       <button class="dashed" data-act="add-ex" data-day="${day.id}">+ Add exercise</button>
       <p class="fine">Tap the icon to change equipment. Renaming a lift keeps its history only if the new name matches an existing lift.</p>
 
+      <div class="section-h"><h2>Training</h2></div>
+      <div class="card">
+        <div class="label">Rest timer target · seconds</div>
+        <input class="field" style="margin-top:10px" inputmode="numeric" value="${esc(s.restSeconds || 60)}" aria-label="Rest target in seconds" data-in="setting" data-field="restSeconds">
+      </div>
+
       <div class="section-h"><h2>Nutrition</h2></div>
       <div class="card">
         <div class="label">Daily protein target · g</div>
