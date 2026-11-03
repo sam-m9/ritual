@@ -1,7 +1,7 @@
 // App shell: rendering, routing between tabs and sheets, and all user actions.
 // Rendering is plain HTML strings with event delegation: tiny, fast, no dependencies.
 
-import { store } from './store.js';
+import { store, mergeRecipes } from './store.js';
 import { exportToFile, importFromFile } from './sync.js';
 import { findDay, finishDay, lastEntry, logMetric, setsFor, suggestedDayId } from './domain.js';
 import { EQUIPMENT } from './seed.js';
@@ -464,6 +464,26 @@ const actions = {
     render();
     const inputs = root.querySelectorAll('[data-in="ex"][data-field="name"]');
     inputs[inputs.length - 1]?.focus();
+  },
+
+  'import-recipes'() {
+    const box = document.getElementById('recipe-json');
+    let pack;
+    try {
+      pack = JSON.parse(box.value.trim().replace(/^```(?:json)?|```$/g, ''));
+    } catch {
+      return toast('That isn’t valid JSON');
+    }
+    if (Array.isArray(pack)) pack = { recipes: pack };
+    const added = mergeRecipes(data(), pack);
+    store.commit();
+    box.value = '';
+    toast(`Added ${added.recipes} recipes · ${added.groceries} staples`);
+  },
+
+  'groc-store'(el) {
+    store.ui.grocStore = el.dataset.store;
+    render();
   },
 
   export() {

@@ -498,3 +498,9 @@ select.field { appearance: none; -webkit-appearance: none; }
 .pocket-seg { font-weight: 900; font-size: 28px; text-transform: uppercase; letter-spacing: 0.04em; }
 .pocket-clock { font-family: var(--mono); font-size: 48px; font-weight: 600; }
 .pocket .label { margin-top: 24px; color: #3a2e27; }
+
+.groc-filter { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter); }
+.groc-filter::-webkit-scrollbar { display: none; }
+.groc-filter button { flex: none; background: var(--card); }
+.groc-name { padding: 8px 0; }
+.groc-store { display: block; margin-top: 3px; color: var(--muted); font-size: 9.5px; text-decoration: none; }

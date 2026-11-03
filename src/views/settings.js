@@ -69,6 +69,13 @@ export function settingsView(data, ui) {
         </div>
       </div>
 
+      <div class="card">
+        <div class="label">Add recipes from JSON</div>
+        <p class="fine" style="margin:8px 0 10px">Paste output from your meal-planning prompt ({ "recipes": [...], "groceries": [...] }). New recipes and staples are added; anything with the same name is skipped.</p>
+        <textarea class="field" id="recipe-json" rows="4" style="min-height:96px" placeholder='{ "recipes": [ ... ], "groceries": [ ... ] }'></textarea>
+        <button class="btn block" style="margin-top:10px" data-act="import-recipes">Add recipes</button>
+      </div>
+
       <div class="section-h"><h2>Data</h2></div>
       <div class="card stack">
         <p class="fine">Everything lives on this phone as one JSON file. Export it as a backup, or import it on another device.</p>

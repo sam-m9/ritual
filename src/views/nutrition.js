@@ -2,6 +2,13 @@ import { esc } from '../util.js';
 import { ICON } from '../icons.js';
 import { RECIPE_CATEGORIES } from '../seed.js';
 
+/** "Paneer (H-E-B / Whole Foods)" -> name with the stores on a small line underneath. */
+function grocLabel(name) {
+  const m = String(name).match(/^(.*\S)\s*\(([^()]*)\)\s*$/);
+  if (!m || !/h-?e-?b|whole foods|trader joe|pantry|365/i.test(m[2])) return esc(name);
+  return `${esc(m[1])}<span class="groc-store label">${esc(m[2])}</span>`;
+}
+
 function recipeMeta(r) {
   const bits = [];
   if (r.protein) bits.push(`${r.protein}g P`);
@@ -66,10 +73,29 @@ export function nutritionView(data, ui) {
   const portions = n.portions.map((p) => `
     <div class="card"><div class="label">${esc(p.label)}</div><div class="v">${esc(p.value)}</div></div>`).join('');
 
-  const groc = n.groceries.map((g) => `
+  // Shop by store: names carry the store in brackets, e.g. "Paneer (H-E-B / Whole Foods)".
+  const STORES = [
+    { id: 'heb', label: 'H-E-B', re: /h-?e-?b/i },
+    { id: 'wf', label: 'Whole Foods', re: /whole foods|\b365\b/i },
+    { id: 'tj', label: 'Trader Joe’s', re: /trader joe/i },
+    { id: 'pantry', label: 'Pantry', re: /pantry/i },
+  ];
+  const storeOf = (g) => STORES.filter((st) => st.re.test(g.name)).map((st) => st.id);
+  const active = STORES.some((st) => st.id === ui.grocStore) ? ui.grocStore : 'all';
+  const shown = n.groceries.filter((g) => active === 'all' || storeOf(g).includes(active));
+  const filters = n.groceries.length ? `
+    <div class="chips-row groc-filter">
+      <button class="${active === 'all' ? 'on' : ''}" data-act="groc-store" data-store="all">All ${n.groceries.length}</button>
+      ${STORES.map((st) => {
+        const c = n.groceries.filter((g) => storeOf(g).includes(st.id)).length;
+        return c ? `<button class="${active === st.id ? 'on' : ''}" data-act="groc-store" data-store="${st.id}">${st.label} ${c}</button>` : '';
+      }).join('')}
+    </div>` : '';
+
+  const groc = shown.map((g) => `
     <div class="groc ${g.done ? 'on' : ''}">
       <button class="check ${g.done ? 'on' : ''}" data-act="toggle-groc" data-id="${g.id}" aria-label="Toggle ${esc(g.name)}">${ICON.check}</button>
-      <button class="groc-name" data-act="toggle-groc" data-id="${g.id}">${esc(g.name)}</button>
+      <button class="groc-name" data-act="toggle-groc" data-id="${g.id}">${grocLabel(g.name)}</button>
       <button class="rm" data-act="remove-groc" data-id="${g.id}" aria-label="Remove ${esc(g.name)}">✕</button>
     </div>`).join('');
 
@@ -93,6 +119,7 @@ export function nutritionView(data, ui) {
       ${RECIPE_CATEGORIES.map((c) => recipeSection(data, ui, c)).join('')}
 
       <div class="section-h"><h2>Grocery staples</h2>${n.groceries.length ? `<span class="count">${n.groceries.filter((g) => g.done).length} / ${n.groceries.length}</span>` : ''}</div>
+      ${filters}
       <section class="card">
         ${groc || '<p class="empty">Your go-to list. Check things off as you shop; checks stay until you clear them.</p>'}
         <form class="add-row" data-form="add-groc">

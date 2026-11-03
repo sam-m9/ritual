@@ -16,13 +16,17 @@
 //                log: [{ id, date, week, index, title, activeSec, plannedSec, longestSec, completed,
 //                        breath, effort, pain, where, km, note, easeOff }] },
 //   nutrition: { meals: [{ id, name, portions }], portions: [{ label, value }],
-//                today: { d, done: { [mealId]: true } },
+//                today: { d, done: { [mealId]: true } }, packs: [packId],
 //                recipes: [{ id, cat, title, protein, minutes, ingredients: [], steps: [], url, notes }],
 //                groceries: [{ id, name, done }] }
 // }
 
 import { SEED_PROGRAM, SEED_MEALS, SEED_PORTIONS } from './seed.js';
-import { clone, today } from './util.js';
+import { clone, today, uid } from './util.js';
+import AUSTIN_PACK from './packs/austin-2026-11.js';
+
+/** Content packs shipped with the app, merged once into existing data. */
+const PACKS = [AUSTIN_PACK];
 
 export const SCHEMA = 2;
 const DATA_KEY = 'ritual-v1';
@@ -86,9 +90,60 @@ export function migrate(raw) {
 
   // Future migrations go here: if (schema < 3) { ... }
 
+  applyPacks(data);
+
   data.app = 'ritual';
   data.schema = SCHEMA;
   return data;
+}
+
+/**
+ * Merge recipes and grocery staples into the document, skipping anything already there
+ * (matched by title / name, case-insensitive). Accepts the shape the meal-planning prompt
+ * produces: { recipes: [...], groceries: [{ name } | "name"] }. Returns counts added.
+ */
+export function mergeRecipes(data, pack) {
+  const n = data.nutrition;
+  const cats = new Set(['meal', 'snack', 'dessert']);
+  const titles = new Set(n.recipes.map((r) => String(r.title).trim().toLowerCase()));
+  const names = new Set(n.groceries.map((g) => String(g.name).trim().toLowerCase()));
+  const list = (v) => (Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : []);
+  let recipes = 0;
+  let groceries = 0;
+  for (const r of pack.recipes || []) {
+    const title = String(r?.title || '').trim();
+    if (!title || titles.has(title.toLowerCase())) continue;
+    n.recipes.push({
+      id: uid('r_'),
+      cat: cats.has(r.cat) ? r.cat : 'meal',
+      title,
+      protein: r.protein ?? '',
+      minutes: r.minutes ?? '',
+      ingredients: list(r.ingredients),
+      steps: list(r.steps),
+      url: String(r.url || ''),
+      notes: String(r.notes || ''),
+    });
+    titles.add(title.toLowerCase());
+    recipes++;
+  }
+  for (const g of pack.groceries || []) {
+    const name = String(typeof g === 'string' ? g : g?.name || '').trim();
+    if (!name || names.has(name.toLowerCase())) continue;
+    n.groceries.push({ id: uid('g_'), name, done: false });
+    names.add(name.toLowerCase());
+    groceries++;
+  }
+  return { recipes, groceries };
+}
+
+function applyPacks(data) {
+  const applied = (data.nutrition.packs ||= []);
+  for (const pack of PACKS) {
+    if (applied.includes(pack.id)) continue;
+    mergeRecipes(data, pack);
+    applied.push(pack.id);
+  }
 }
 
 function readJSON(key) {
@@ -119,9 +174,9 @@ export const store = {
   init() {
     const saved = readJSON(DATA_KEY);
     try {
-      this.data = saved ? migrate(saved) : defaultData();
+      this.data = migrate(saved || defaultData());
     } catch {
-      this.data = defaultData();
+      this.data = migrate(defaultData());
     }
     this.ui = {
       tab: 'train',
@@ -174,7 +229,7 @@ export const store = {
   },
 
   reset() {
-    this.data = defaultData();
+    this.data = migrate(defaultData());
     this.ui.open = {};
     this.ui.dayId = null;
     this.commit();
