@@ -363,6 +363,12 @@ const actions = {
     }
   },
 
+  'lift-view'(el) {
+    store.ui.liftView = el.dataset.v;
+    store.saveUI();
+    render();
+  },
+
   'toggle-ex'(el) {
     const ex = exById(store.ui.dayId, el.dataset.ex);
     if (!ex) return;

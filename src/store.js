@@ -421,8 +421,8 @@ export const store = {
   },
 
   uiSnapshot() {
-    const { tab, dayId, editDayId, open, timer } = this.ui;
-    return { tab, dayId, editDayId, open, timer };
+    const { tab, dayId, editDayId, open, timer, liftView } = this.ui;
+    return { tab, dayId, editDayId, open, timer, liftView };
   },
 
   saveUI() {

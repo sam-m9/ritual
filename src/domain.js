@@ -1,6 +1,7 @@
 // Training and progress logic. Pure functions over the data document, with no DOM access.
 
 import { liftKey, num, today, uid, weekStart } from './util.js';
+import { MUSCLES, inferMuscle, muscleOf } from './muscles.js';
 
 export function findDay(data, dayId) {
   return data.program.find((d) => d.id === dayId) || data.program[0];
@@ -184,4 +185,56 @@ export function barHeights(values) {
   const min = Math.min(...values);
   const max = Math.max(...values);
   return values.map((v) => (max === min ? 60 : 15 + ((v - min) / (max - min)) * 85));
+}
+
+/** Body part for a logged lift name: the matching program exercise's tag, else inferred. */
+export function muscleForName(data, name) {
+  const key = liftKey(name);
+  for (const day of data.program) {
+    const ex = day.exercises.find((e) => liftKey(e.name) === key);
+    if (ex) return muscleOf(ex);
+  }
+  return inferMuscle(name);
+}
+
+/**
+ * Per body part: working sets per week for the last `weeks` weeks (oldest first), and each
+ * lift's top-set history. Only body parts with any logged sets are returned, in MUSCLES order.
+ */
+export function bodyPartStats(data, weeks = 8) {
+  const starts = [];
+  const d = new Date(weekStart() + 'T00:00:00');
+  for (let i = weeks - 1; i >= 0; i--) {
+    const w = new Date(d);
+    w.setDate(d.getDate() - i * 7);
+    starts.push(today(w));
+  }
+  const weekIndex = (date) => {
+    for (let i = starts.length - 1; i >= 0; i--) if (date >= starts[i]) return i;
+    return -1;
+  };
+  const groups = new Map();
+  const group = (id) => {
+    if (!groups.has(id)) groups.set(id, { id, weekly: Array(weeks).fill(0), total: 0, lifts: new Map() });
+    return groups.get(id);
+  };
+  for (const s of data.sessions) {
+    const wi = weekIndex(s.date);
+    for (const e of s.exercises) {
+      const g = group(muscleForName(data, e.name));
+      g.total += e.sets.length;
+      if (wi >= 0) g.weekly[wi] += e.sets.length;
+      const top = topSet(e.sets);
+      if (!top || (top.w === null && top.r === null)) continue;
+      const key = liftKey(e.name);
+      if (!g.lifts.has(key)) g.lifts.set(key, { name: e.name, points: [] });
+      g.lifts.get(key).points.push({ d: s.date, w: top.w, r: top.r, at: s.finishedAt });
+    }
+  }
+  return MUSCLES.map((m) => groups.get(m.id))
+    .filter(Boolean)
+    .map((g) => ({
+      ...g,
+      lifts: [...g.lifts.values()].sort((a, b) => String(b.points.at(-1).at).localeCompare(String(a.points.at(-1).at))),
+    }));
 }

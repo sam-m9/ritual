@@ -1,5 +1,6 @@
 import { esc, fmt, shortDate } from '../util.js';
-import { barHeights, liftHistoryByDay, weekStats } from '../domain.js';
+import { barHeights, bodyPartStats, liftHistoryByDay, weekStats } from '../domain.js';
+import { muscleLabel } from '../muscles.js';
 
 const bars = (values) => `<div class="bars">${barHeights(values).map((h) => `<i style="height:${h}%"></i>`).join('')}</div>`;
 
@@ -43,11 +44,35 @@ function liftCard(lift, unit, tag) {
     </section>`;
 }
 
-export function progressView(data) {
+function bodyPartCard(g, unit) {
+  const thisWeek = g.weekly.at(-1);
+  const lastWeek = g.weekly.at(-2);
+  const max = Math.max(1, ...g.weekly);
+  const bars = `<div class="bars wk-bars">${g.weekly.map((n, i) =>
+    `<i class="${i === g.weekly.length - 1 ? 'now' : ''} ${n ? '' : 'zero'}" style="height:${n ? 15 + (n / max) * 85 : 6}%" title="${n} sets"></i>`).join('')}</div>`;
+  const lifts = g.lifts.map((l) => {
+    const pts = l.points;
+    const byReps = pts.every((p) => p.w === null);
+    const v = (p) => (byReps ? p.r : p.w);
+    const u = byReps ? 'reps' : unit;
+    return `<div class="bp-lift"><span>${esc(l.name)}</span><b>${fmt(v(pts[0]))} → ${fmt(v(pts.at(-1)))} ${u}</b></div>`;
+  }).join('');
+  return `
+    <section class="card trend">
+      <div class="trend-top"><h3>${esc(muscleLabel(g.id))}</h3><span class="val">${thisWeek}<small>sets this wk</small></span></div>
+      ${bars}
+      <div class="entries"><span>Last week · <b>${lastWeek}</b></span><span>8 weeks · <b>${g.weekly.reduce((a, b) => a + b, 0)}</b></span><span>All time · <b>${g.total}</b></span></div>
+      ${lifts ? `<div class="bp-lifts">${lifts}</div>` : ''}
+    </section>`;
+}
+
+export function progressView(data, ui = {}) {
   const { weight, waist } = data.body;
   const unit = data.settings.unit;
   const wUnit = data.settings.waistUnit;
   const groups = liftHistoryByDay(data);
+  const parts = bodyPartStats(data);
+  const byDay = ui.liftView === 'day';
   const wk = weekStats(data);
 
   return `
@@ -76,9 +101,16 @@ export function progressView(data) {
       ${trendCard('Waist', waist, wUnit, 'waist')}
 
       <div class="section-h"><h2>Lift history</h2></div>
-      ${groups.length ? groups.map((g) => `
-        <h3 class="lift-group label">${esc(g.label)}</h3>
-        ${g.lifts.map((l) => liftCard(l, unit, g.day ? `Day ${g.day.num}` : g.label)).join('')}`).join('') :
-        '<section class="card"><p class="empty" style="color:var(--ink)">Finish a day to log top sets. Each lift will chart here, week to week.</p></section>'}
+      ${groups.length ? `
+        <div class="seg lift-toggle" style="grid-template-columns:1fr 1fr">
+          <button class="${byDay ? '' : 'on'}" data-act="lift-view" data-v="body">By body part</button>
+          <button class="${byDay ? 'on' : ''}" data-act="lift-view" data-v="day">By day</button>
+        </div>
+        ${byDay ? groups.map((g) => `
+          <h3 class="lift-group label">${esc(g.label)}</h3>
+          ${g.lifts.map((l) => liftCard(l, unit, g.day ? `Day ${g.day.num}` : g.label)).join('')}`).join('')
+        : parts.map((g) => bodyPartCard(g, unit)).join('')}
+        ${byDay ? '' : '<p class="fine" style="padding:0 4px">Working sets logged per week, Monday to Sunday. Most muscles grow well on about 10–20 sets a week.</p>'}` :
+        '<section class="card"><p class="empty" style="color:var(--ink)">Finish a day to log top sets. Each lift will chart here, week to week, by body part and by day.</p></section>'}
     </div>`;
 }

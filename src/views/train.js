@@ -2,6 +2,7 @@ import { esc, fmt, repLow } from '../util.js';
 import { EQ_ICONS, EQ_LABELS, ICON } from '../icons.js';
 import { dayProgress, findDay, lastEntry, setsFor, topSet, dayHasActivity } from '../domain.js';
 import { nextSession, totalSec } from '../runplan.js';
+import { muscleOf, muscleLabel } from '../muscles.js';
 import { today } from '../util.js';
 
 export function effortTag(ex, day) {
@@ -76,7 +77,7 @@ function exerciseCard(data, ui, day, ex) {
   return `
   <article class="ex-card ${done ? 'done' : ''}">
     ${head}
-    <div class="last label">Last time · <b>${esc(lastLine(data, ex))}</b></div>
+    <div class="last label"><span class="bp-tag">${esc(muscleLabel(muscleOf(ex)))}</span> Last time · <b>${esc(lastLine(data, ex))}</b></div>
     ${rows}
   </article>`;
 }

@@ -1,6 +1,7 @@
 import { esc } from '../util.js';
 import { EQ_ICONS, EQ_LABELS } from '../icons.js';
 import { EFFORT_OPTIONS, RECIPE_CATEGORIES } from '../seed.js';
+import { MUSCLES, muscleOf } from '../muscles.js';
 import { findDay } from '../domain.js';
 import { SCHEMA } from '../store.js';
 
@@ -27,6 +28,10 @@ function exerciseEditor(day, ex) {
             ${EFFORT_OPTIONS.map((o) => `<option value="${o}" ${o === ex.effort ? 'selected' : ''}>${effortLabel(o)}</option>`).join('')}
           </select></div>
       </div>
+      <div><div class="mini-label">Body part</div>
+        <select class="field" data-in="ex" data-field="muscle" ${attrs}>
+          ${MUSCLES.map((m) => `<option value="${m.id}" ${m.id === muscleOf(ex) ? 'selected' : ''}>${m.label}</option>`).join('')}
+        </select></div>
       <input class="field" type="url" inputmode="url" value="${esc(ex.url)}" placeholder="Form video link (YouTube, etc.)" data-in="ex" data-field="url" ${attrs}>
       <input class="field" value="${esc(ex.cue || '')}" placeholder="Cue (optional), e.g. superset with #5, pause at stretch" data-in="ex" data-field="cue" ${attrs}>
     </div>`;

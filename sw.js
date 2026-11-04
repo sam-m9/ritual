@@ -1,7 +1,7 @@
 // Offline support. App files are precached; Google Fonts are cached on first use.
 // Bump VERSION whenever app files change so phones pick up the update.
 
-const VERSION = 'ritual-v1.15.0';
+const VERSION = 'ritual-v1.16.0';
 const FONT_CACHE = 'ritual-fonts';
 
 const SHELL = [
@@ -28,6 +28,7 @@ const SHELL = [
   './src/views/run.js',
   './src/runplan.js',
   './src/runner.js',
+  './src/muscles.js',
   './src/packs/austin-2026-11.js',
   './src/packs/austin-2026-11b.js',
   './src/packs/austin-2026-11c.js',
