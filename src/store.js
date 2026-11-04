@@ -158,6 +158,81 @@ function applyPacks(data) {
  * One-time fixes to pack content that's already on a device. Packs above are the
  * corrected source; a revision brings older copies in line with them.
  */
+/** Near-duplicate grocery items folded into one line each (first match keeps its place). */
+const GROCERY_MERGES = [
+  {
+    name: 'Spice rack: cumin (ground + seeds), coriander, smoked paprika, turmeric, garam masala, allspice, cardamom, chipotle + ancho powder, sumac, dried thyme, Aleppo, sesame seeds, bay leaves, black peppercorns (H-E-B / Whole Foods / Pantry)',
+    from: [
+      'Spices: cumin, coriander, smoked paprika, turmeric, garam masala, allspice, cardamom, chipotle powder, sumac, dried thyme, Aleppo (Pantry)',
+      "Za'atar spices: dried thyme, sumac, sesame (Pantry)",
+      'Ground allspice (H-E-B)', 'Ground cardamom (H-E-B)', 'Smoked paprika (H-E-B)', 'Sumac (Whole Foods)',
+      'Chipotle powder (H-E-B)', 'Ancho chili powder and chipotle powder (H-E-B)', 'Whole cumin seeds (H-E-B)',
+      'Bay leaves and whole black peppercorns (H-E-B)',
+    ],
+  },
+  {
+    name: "Plain Greek yogurt 32 oz: 365 Organic Whole Milk, TJ Nonfat or Fage 0% (Whole Foods / Trader Joe's / H-E-B)",
+    from: [
+      "Plain Whole Milk Greek Yogurt 32 oz (Trader Joe's / Whole Foods)",
+      '365 Organic Greek Whole Milk Yogurt Plain 32 oz (Whole Foods)',
+      "Trader Joe's Nonfat Plain Greek Yogurt 32 oz (Trader Joe's)",
+    ],
+  },
+  {
+    name: 'Cottage cheese 32 oz: H-E-B Mootopia or Good Culture 2% (H-E-B)',
+    from: ['H-E-B Mootopia Small Curd Cottage Cheese 32 oz (H-E-B)'],
+  },
+  {
+    name: "Canned chickpeas, low-sodium or 365 Organic (H-E-B / Trader Joe's / Whole Foods)",
+    from: ["Canned Low-Sodium Chickpeas (H-E-B / Trader Joe's)", '365 Organic Garbanzo Beans, 2 cans (Whole Foods)'],
+  },
+  {
+    name: 'Tamari, low-sodium, no added sugar, check label (Whole Foods)',
+    from: ['Low-Sodium Tamari or Soy Sauce (Pantry)', 'Gluten-free tamari, check label (Whole Foods)'],
+  },
+  {
+    name: 'Feta in brine and cotija (H-E-B / Whole Foods)',
+    from: ['Crumbled Feta Cheese in Brine (H-E-B / Whole Foods)', 'Feta or cotija block (H-E-B)'],
+  },
+  {
+    name: 'Extra virgin olive oil, avocado oil & avocado oil spray, check label (H-E-B / Pantry)',
+    from: ['Extra Virgin Olive Oil & Avocado Oil Spray (Pantry)', 'Avocado oil spray, check label (H-E-B)'],
+  },
+  {
+    name: 'Unsweetened cocoa powder, Dutch-process (Whole Foods / H-E-B)',
+    from: ['Unsweetened Dutch-Process Cocoa Powder (Whole Foods)', 'Unsweetened cocoa powder (H-E-B)'],
+  },
+  {
+    name: "Pistachios or almonds (Trader Joe's)",
+    from: ["Pistachios or almonds (Trader Joe's)", "Roasted pistachios (Trader Joe's)"],
+  },
+  {
+    name: "Trader Joe's frozen rice pouches, jasmine and brown (Trader Joe's)",
+    from: ["Trader Joe's Frozen Organic Jasmine Rice Pouches (Trader Joe's)", "Trader Joe's Frozen Brown Rice Pouches (Trader Joe's)"],
+  },
+  {
+    name: "Trader Joe's High Protein Organic Super Firm Tofu, plus one backup in the freezer (Trader Joe's)",
+    from: ["Trader Joe's High Protein Organic Super Firm Tofu (Trader Joe's)", "Frozen Super Firm Tofu (Back-up) (Trader Joe's)"],
+  },
+  {
+    name: 'Vinegars: distilled or apple cider, unseasoned rice (H-E-B), sherry (Whole Foods)',
+    from: ['Distilled or apple cider vinegar for pickling (H-E-B)', 'Unseasoned rice vinegar (H-E-B)', 'Sherry vinegar (Whole Foods)'],
+  },
+];
+
+/** Fold each merge group into one item; it stays checked only if every merged item was. */
+function mergeGroceries(n) {
+  for (const m of GROCERY_MERGES) {
+    const keys = new Set([m.name, ...m.from].map((x) => x.toLowerCase()));
+    const hits = n.groceries.filter((g) => keys.has(String(g.name).trim().toLowerCase()));
+    if (!hits.length) continue;
+    const keep = hits[0];
+    keep.name = m.name;
+    keep.done = hits.every((g) => g.done);
+    n.groceries = n.groceries.filter((g) => g === keep || !hits.includes(g));
+  }
+}
+
 const REVISIONS = [
   {
     // Nov 4: no fish or seafood except shrimp; avoid recipes built on sugary or
@@ -184,6 +259,13 @@ const REVISIONS = [
       ]);
       n.groceries = n.groceries.filter((g) => !gone.has(String(g.name).trim().toLowerCase()));
       mergeRecipes(data, { groceries: ["Za'atar spices: dried thyme, sumac, sesame (Pantry)", 'Chipotle powder (H-E-B)'] });
+    },
+  },
+  {
+    // Nov 4: fold near-duplicate grocery items (spices, yogurts, tamari, oils, etc.) into one line each.
+    id: 'groc-merge-2026-11-04',
+    apply(data) {
+      mergeGroceries(data.nutrition);
     },
   },
 ];
