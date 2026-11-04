@@ -1,4 +1,4 @@
-// Recipe pack 3: "Solo weeknight dinners in Austin".
+// Recipe pack 3 (no fish other than shrimp; see revision in store.js): "Solo weeknight dinners in Austin".
 // 20 high-protein dinners built from three rotating proteins, a frozen or batch grain,
 // a crunchy raw veg kit and five yogurt sauces made on Sunday. Plus prep and label notes.
 // Ratings: A = rotation anchor, B = variety, C = filler or emergency.
@@ -58,20 +58,6 @@ export default {
       'Finish with Sauce 1 and a pinch of Aleppo or chili flakes.',
     ], 'A · rotation anchor. Adapted from Ethan Chlebowski’s kofta bowl. Turkey needs the crust and the allspice or it tastes like nothing. H-E-B turkey is 23g protein per 4 oz raw, so 7 oz ≈ 40g.'),
 
-    meal('Salmon Crunch Salad', 45, 8, [
-      "1 can Trader Joe's Wild Alaskan Pink Salmon, skinless boneless (Trader Joe's)",
-      '2 jammy eggs (Sunday prep)',
-      '1 tbsp olive oil, lemon juice, black pepper (Pantry)',
-      'Chopped quick-pickled jalapeño (Sunday prep)',
-      'Romaine, carrot ribbons, radish (H-E-B)',
-      'Crispy chickpeas (Sunday prep)',
-      `${S1} or ${S3}`,
-      'Homemade za’atar (Sunday prep)',
-    ], [
-      'Flake salmon with olive oil, lemon juice, black pepper and chopped pickled jalapeño.',
-      'Pile over romaine, carrot ribbons, radish, crispy chickpeas and halved eggs.',
-      'Drizzle with Sauce 1 or Sauce 3 and finish with za’atar.',
-    ], 'B · variety. Salmon ≈33g per can + 2 eggs ≈12g. The salmon can was confirmed only via third-party listings; check in store.'),
 
     meal('Garlic Shrimp & Feta Chopped Salad', 44, 10, [
       "8 oz Trader Joe's Wild Raw Argentinian Red Shrimp, frozen (Trader Joe's)",
@@ -106,17 +92,17 @@ export default {
     meal('Rotisserie Chicken Masala', 44, 12, [
       '6 oz rotisserie chicken, shredded (H-E-B)',
       '1 tsp ghee (H-E-B)',
-      "1/2 cup Trader Joe's Masala Simmer Sauce, or homemade masala base (Trader Joe's)",
+      '1/2 cup homemade masala base (Sunday prep, frozen portions)',
       'Pinch garam masala, grated ginger (Pantry / H-E-B)',
       'Frozen peas (H-E-B)',
       "Frozen rice (Trader Joe's)",
       'Cilantro and lime (H-E-B)',
       `1/3 cup ${S4}`,
     ], [
-      'Warm ghee; add the masala sauce with a splash of water, a pinch of garam masala and grated ginger.',
+      'Warm ghee; add the masala base with a splash of water, a pinch of garam masala and grated ginger.',
       'Add shredded chicken and frozen peas; simmer 5 minutes.',
       'Serve over rice with Sauce 4, cilantro and lime.',
-    ], 'B · speed exception: the TJ jarred masala contains canola oil. Cleaner path: make a masala base on Sunday (ghee, onion, garlic, ginger, tomato paste, crushed tomatoes, garam masala, splash of cream; 25 min) and freeze in 1/2-cup portions.'),
+    ], 'B · variety. Masala base: on Sunday cook ghee, onion, garlic, ginger, tomato paste, crushed tomatoes, garam masala and a splash of cream (25 min); freeze in 1/2-cup portions. In a pinch, Trader Joe’s Masala Simmer Sauce works (canola oil mid-list, no added sugar).'),
 
     meal('Red Curry Shrimp & Tofu', 46, 15, [
       "8 oz Trader Joe's Argentinian Red Shrimp, thawed (Trader Joe's)",
@@ -124,14 +110,14 @@ export default {
       '1 tbsp red curry paste, label checked for sugar (H-E-B)',
       '1 tsp avocado oil (Pantry)',
       '1/2 cup coconut milk (H-E-B)',
-      'Splash fish sauce, label checked for sugar (H-E-B)',
+      'Splash of tamari (Pantry)',
       'Frozen broccoli (H-E-B)',
       "Frozen Organic Jasmine Rice (Trader Joe's)",
       'Lime and cilantro (H-E-B)',
       `${S5}, optional`,
     ], [
       'Fry the red curry paste in avocado oil for 1 minute.',
-      'Add coconut milk, a splash of fish sauce, cubed tofu and frozen broccoli; simmer 5 minutes.',
+      'Add coconut milk, a splash of tamari, cubed tofu and frozen broccoli; simmer 5 minutes.',
       'Add thawed shrimp for the last 3 minutes.',
       'Finish with lime and cilantro over jasmine rice; Sauce 5 on the side for heat and cool together.',
     ], 'A · rotation anchor. Replaces Trader Joe’s Thai Red Curry Sauce, which contains sugar and canola oil.'),
@@ -155,7 +141,7 @@ export default {
 
     meal('Masala Lentils with Fried Eggs', 44, 10, [
       "1 cup Trader Joe's Steamed Lentils (Trader Joe's)",
-      '1/3 cup masala base, homemade or TJ jar (flagged)',
+      '1/3 cup homemade masala base (Sunday prep)',
       'Frozen spinach (H-E-B)',
       '3 eggs (H-E-B)',
       'Ghee (H-E-B)',
@@ -165,7 +151,7 @@ export default {
       'Warm lentils with the masala base and frozen spinach.',
       'Fry eggs in ghee until the edges crisp.',
       'Set the eggs over the lentils; add Sauce 4, cilantro and chili crisp.',
-    ], 'B · variety. If you use the TJ Masala jar, it contains canola oil.'),
+    ], 'B · variety.'),
 
     meal('Air-Fried Curry Yogurt Chicken Thighs', 48, 5, [
       '8 oz plain boneless skinless chicken thighs, raw (H-E-B / any store)',
@@ -198,7 +184,7 @@ export default {
 
     meal('Larb-Style Turkey Lettuce Bowl', 46, 12, [
       '8 oz H-E-B Natural Lean Ground Turkey 93% (H-E-B)',
-      'Fish sauce, sugar-free label (H-E-B)',
+      '1 tbsp tamari (Pantry)',
       'Lime juice, chili flakes, sliced shallot (H-E-B / Pantry)',
       'Mint and cilantro (H-E-B)',
       'Rice and romaine leaves (H-E-B)',
@@ -206,10 +192,10 @@ export default {
       `${S5} or plain chili crisp`,
     ], [
       'Brown turkey dry and hard.',
-      'Season with fish sauce, lime juice, chili flakes and sliced shallot.',
+      'Season with tamari, plenty of lime juice, chili flakes, sliced shallot and a pinch of salt.',
       'Off the heat, add mint and cilantro.',
       'Eat over rice and romaine leaves with cucumber and Sauce 5 or chili crisp.',
-    ], 'B · variety.'),
+    ], 'B · variety. Tamari and extra lime stand in for fish sauce.'),
 
     meal('Turkish Eggs over Lentils', 42, 10, [
       `1/2 cup ${S5}, at room temperature`,
@@ -225,18 +211,6 @@ export default {
       'Top with Crunchy Chili Onion melted in a little butter, and Aleppo pepper.',
     ], 'B · variety. The Turkish çılbır move.'),
 
-    meal('Crispy Rice Salmon Bowl', 45, 12, [
-      "Thawed frozen jasmine or brown rice (Trader Joe's)",
-      'Avocado oil (Pantry)',
-      "1 can Trader Joe's Wild Alaskan Pink Salmon (Trader Joe's)",
-      "Tamari, rice vinegar, Crunchy Chili Onion (Pantry / Trader Joe's)",
-      'Cucumber, scallion, 1 egg (H-E-B)',
-      `1/3 cup ${S5}`,
-    ], [
-      'Press thawed rice into a hot pan with avocado oil and leave it 6 minutes to crisp.',
-      'Dress salmon with tamari, rice vinegar and chili crisp.',
-      'Top the crispy rice with salmon, cucumber, scallion and a fried egg; Sauce 5 underneath.',
-    ], 'B · variety. The viral salmon rice bowl without the mayo or sriracha sugar.'),
 
     meal('Chili Crisp Beef Red Lentil Pasta', 49, 15, [
       "3 oz dry Trader Joe's Organic Red Lentil Sedanini (Trader Joe's)",
@@ -327,7 +301,7 @@ export default {
       '3 tbsp chopped dill and parsley (or 1 tbsp dried dill)',
       '2 tbsp extra virgin olive oil',
       '3/4 tsp kosher salt, black pepper',
-    ], ['Stir everything together and jar it.'], 'Keeps 5–6 days; makes 4–6 servings. Garlic intensifies over days, so start lighter. For: kofta turkey, salmon crunch, shrimp & feta, lentil farro, shawarma thighs.'),
+    ], ['Stir everything together and jar it.'], 'Keeps 5–6 days; makes 4–6 servings. Garlic intensifies over days, so start lighter. For: kofta turkey, shrimp & feta, lentil farro, shawarma thighs.'),
 
     prep('Sauce 2 · Green Chile Zhoug Yogurt', 5, [
       '1.5 cups Greek yogurt',
@@ -344,7 +318,7 @@ export default {
       'Juice of 1 lemon, 1 grated garlic clove',
       '1/2 tsp salt',
       '3–4 tbsp cold water',
-    ], ['Whisk together, thinning with cold water to drizzle consistency.', 'Finish servings with sumac or homemade za’atar.'], 'Keeps 7 days. For: shawarma salad, salmon crunch, lentil farro, crispy rice salmon, shawarma thighs.'),
+    ], ['Whisk together, thinning with cold water to drizzle consistency.', 'Finish servings with sumac or homemade za’atar.'], 'Keeps 7 days. For: shawarma salad, lentil farro, Turkish eggs, shawarma thighs.'),
 
     prep('Sauce 4 · Masala Raita Base', 7, [
       '1.5 cups Greek yogurt',
@@ -358,7 +332,7 @@ export default {
       '1.5 cups Greek yogurt',
       '1 grated garlic clove, juice of 1/2 lemon, 1/2 tsp salt',
       "At serving: 1 tbsp Trader Joe's Crunchy Chili Onion + squeeze of lemon",
-    ], ['Store plain. At serving, spoon on Crunchy Chili Onion and a squeeze of lemon.'], 'Keeps 7 days. Rescues anything. For: red curry shrimp, chili crisp tofu, larb turkey, Turkish eggs, crispy rice salmon, red lentil pasta.'),
+    ], ['Store plain. At serving, spoon on Crunchy Chili Onion and a squeeze of lemon.'], 'Keeps 7 days. Rescues anything. For: red curry shrimp, chili crisp tofu, larb turkey, Turkish eggs, red lentil pasta.'),
 
     prep('Homemade Za’atar', 3, [
       '2 tbsp dried thyme',
@@ -424,7 +398,7 @@ export default {
       '365 non-Greek whole milk yogurt: only 6g protein (get 365 Organic Greek)',
     ], [
       'Speed exceptions that are OK sometimes: TJ Shawarma Thighs (soybean oil only as color carrier), TJ Masala Simmer Sauce (canola mid-list), H-E-B Meal Simple Tikka Masala Bowl (canola in sauce), H-E-B 17g Protein Greek Yogurt (added milk protein concentrate).',
-    ], 'Verified against store sites and label databases; store-level stock in Austin wasn’t checked. Note: some earlier cookbook recipes use canned chipotles in adobo and TJ chimichurri; swap if you’re avoiding sugar and seed oils.'),
+    ], 'Verified against store sites and label databases; store-level stock in Austin wasn’t checked. Your cookbook recipes were updated to avoid these: chipotle powder instead of adobo, homemade za’atar, plain steak instead of pre-marinated, quick pickles made at home.'),
   ],
 
   // Weekly list from the report (dedupes against your existing staples by exact name).
@@ -446,7 +420,6 @@ export default {
     'Tomato paste and crushed tomatoes (H-E-B)',
     'Coconut milk (H-E-B)',
     'Red curry paste, no sugar (H-E-B)',
-    'Fish sauce, no sugar (H-E-B)',
     'Unseasoned rice vinegar (H-E-B)',
     'Distilled or apple cider vinegar for pickling (H-E-B)',
     'Tahini (H-E-B)',
@@ -456,7 +429,6 @@ export default {
     "Trader Joe's 10 Minute Farro (Trader Joe's)",
     "Trader Joe's Crunchy Chili Onion (Trader Joe's)",
     "Trader Joe's Nonfat Plain Greek Yogurt 32 oz (Trader Joe's)",
-    "Wild Alaskan Pink Salmon, skinless boneless, 2 cans (Trader Joe's)",
     "Wild Raw Argentinian Red Shrimp, 1 lb frozen (Trader Joe's)",
     "Organic Red Lentil Sedanini (Trader Joe's)",
     "Everything but the Bagel Seasoning (Trader Joe's)",

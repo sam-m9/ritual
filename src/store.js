@@ -146,7 +146,46 @@ function applyPacks(data) {
     mergeRecipes(data, pack);
     applied.push(pack.id);
   }
+  for (const rev of REVISIONS) {
+    if (applied.includes(rev.id)) continue;
+    rev.apply(data);
+    applied.push(rev.id);
+  }
 }
+
+/**
+ * One-time fixes to pack content that's already on a device. Packs above are the
+ * corrected source; a revision brings older copies in line with them.
+ */
+const REVISIONS = [
+  {
+    // Nov 4: no fish or seafood except shrimp; avoid recipes built on sugary or
+    // seed-oil-heavy products (adobo, TJ za'atar blend, pre-marinated meats, store pickles).
+    id: 'clean-2026-11-04',
+    apply(data) {
+      const n = data.nutrition;
+      const drop = new Set(['salmon crunch salad', 'crispy rice salmon bowl']);
+      n.recipes = n.recipes.filter((r) => !drop.has(String(r.title).trim().toLowerCase()));
+      const fresh = new Map(PACKS.flatMap((p) => p.recipes).map((r) => [r.title.trim().toLowerCase(), r]));
+      for (const r of n.recipes) {
+        const src = fresh.get(String(r.title).trim().toLowerCase());
+        if (!src) continue;
+        Object.assign(r, {
+          protein: src.protein ?? '', minutes: src.minutes ?? '',
+          ingredients: [...src.ingredients], steps: [...src.steps], notes: src.notes || '',
+        });
+      }
+      const gone = new Set([
+        "middle eastern za'atar blend (trader joe's / whole foods)",
+        'san marcos chipotle peppers in adobo (h-e-b)',
+        'fish sauce, no sugar (h-e-b)',
+        "wild alaskan pink salmon, skinless boneless, 2 cans (trader joe's)",
+      ]);
+      n.groceries = n.groceries.filter((g) => !gone.has(String(g.name).trim().toLowerCase()));
+      mergeRecipes(data, { groceries: ["Za'atar spices: dried thyme, sumac, sesame (Pantry)", 'Chipotle powder (H-E-B)'] });
+    },
+  },
+];
 
 function readJSON(key) {
   try {
