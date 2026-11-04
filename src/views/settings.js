@@ -64,6 +64,12 @@ export function settingsView(data, ui) {
       <div class="card">
         <div class="label">Rest timer target · seconds</div>
         <input class="field" style="margin-top:10px" inputmode="numeric" value="${esc(s.restSeconds || 60)}" aria-label="Rest target in seconds" data-in="setting" data-field="restSeconds">
+        <div class="label" style="margin-top:14px">Sound when rest is up</div>
+        <div class="seg" style="margin-top:8px">
+          ${[['voice', 'Chime + voice'], ['chime', 'Chime'], ['off', 'Off']].map(([v, l]) => `<button class="${(s.restSound || 'voice') === v ? 'on' : ''}" data-act="rest-sound" data-v="${v}">${l}</button>`).join('')}
+        </div>
+        <button class="btn block ghost" style="margin-top:8px" data-act="rest-test">Test sound</button>
+        <p class="fine" style="margin-top:8px">Plays over your music. Keep Ritual open and the ringer on; it can't ring while the phone is locked.</p>
       </div>
 
       <div class="section-h"><h2>Nutrition</h2></div>

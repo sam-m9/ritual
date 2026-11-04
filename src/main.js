@@ -12,7 +12,7 @@ import { nutritionView } from './views/nutrition.js';
 import { progressView } from './views/progress.js';
 import { settingsView, recipeEditorView } from './views/settings.js';
 import { runView, runLiveView, runLogView, runPlanView, runLevelView, paintRun } from './views/run.js';
-import { runner } from './runner.js';
+import { runner, restChime, unlockAudio } from './runner.js';
 import { nextSession, applyResult, longestRunSec, totalSec } from './runplan.js';
 
 const root = document.getElementById('app');
@@ -130,7 +130,25 @@ function paintTimer() {
   el.classList.toggle('over', ms >= target);
 }
 
-setInterval(() => { if (store.ui.timer?.start) paintTimer(); }, 250);
+/** Ring once when the rest target passes (works on any tab while the app is open). */
+function checkRestAlert() {
+  const t = store.ui.timer;
+  if (!t?.start || t.alerted) return;
+  const target = (Number(data().settings.restSeconds) || 60) * 1000;
+  const ms = timerElapsed();
+  if (ms < target) return;
+  t.alerted = true;
+  store.saveUI();
+  const mode = data().settings.restSound || 'voice';
+  // Don't ring long after the fact (e.g. the phone was locked through it).
+  if (mode !== 'off' && ms - target < 8000) restChime(mode === 'voice');
+}
+
+setInterval(() => {
+  if (!store.ui.timer?.start) return;
+  paintTimer();
+  checkRestAlert();
+}, 250);
 
 function toast(message, action) {
   document.querySelector('.toast')?.remove();
@@ -363,6 +381,18 @@ const actions = {
     }
   },
 
+  'rest-sound'(el) {
+    data().settings.restSound = el.dataset.v;
+    store.commit();
+    render();
+  },
+
+  'rest-test'() {
+    unlockAudio();
+    const mode = data().settings.restSound || 'voice';
+    restChime(mode !== 'chime');
+  },
+
   'lift-view'(el) {
     store.ui.liftView = el.dataset.v;
     store.saveUI();
@@ -387,7 +417,11 @@ const actions = {
   'timer-toggle'() {
     const t = (store.ui.timer ||= { start: null, acc: 0 });
     if (t.start) { t.acc += Date.now() - t.start; t.start = null; }
-    else t.start = Date.now();
+    else {
+      if (!t.acc) t.alerted = false;
+      t.start = Date.now();
+      if (data().settings.restSound !== 'off') unlockAudio(); // a tap lets iOS play the chime later
+    }
     store.saveUI();
     render();
   },
@@ -396,6 +430,8 @@ const actions = {
     const t = (store.ui.timer ||= { start: null, acc: 0 });
     t.acc = 0;
     t.start = t.start ? Date.now() : null; // "Restart" keeps it running from zero
+    t.alerted = false;
+    if (t.start && data().settings.restSound !== 'off') unlockAudio();
     store.saveUI();
     render();
   },

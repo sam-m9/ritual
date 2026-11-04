@@ -148,8 +148,35 @@ function say(text, interrupt = false) {
   speechSynthesis.speak(u);
 }
 
+/**
+ * Rest-timer alert: a bright two-tone chime repeated twice, then an optional spoken cue.
+ * Plays over music (audio session set to 'transient' when the timer starts).
+ */
+export function restChime(withVoice = true) {
+  const ac = audio();
+  if (ac) {
+    [0, 0.45].forEach((offset) => {
+      [[1046.5, 0], [1568, 0.16]].forEach(([freq, dt]) => {
+        const t0 = ac.currentTime + offset + dt;
+        const o = ac.createOscillator();
+        const g = ac.createGain();
+        o.type = 'sine';
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.9, t0 + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
+        o.connect(g).connect(ac.destination);
+        o.start(t0);
+        o.stop(t0 + 0.55);
+      });
+    });
+  }
+  if (withVoice) setTimeout(() => say('Rest’s up. Next set.', true), 900);
+  try { navigator.vibrate?.([200, 100, 200]); } catch { /* not supported on iPhone */ }
+}
+
 /** Must be called from a tap so iOS allows sound and speech for the rest of the run. */
-function unlockAudio() {
+export function unlockAudio() {
   try {
     // Ask iOS to treat our cues as short interruptions that duck other audio.
     if (navigator.audioSession) navigator.audioSession.type = 'transient';
