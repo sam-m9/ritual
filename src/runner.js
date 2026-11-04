@@ -111,32 +111,78 @@ export function buildCues(session, detail = 'full') {
 
 // ---------- audio ----------
 
-let ctx = null;
+// iPhone notes: Web Audio is muted by the silent switch and gets suspended when other apps
+// (music) own audio, and it can't be resumed without a tap. So cues play through one regular
+// <audio> element instead. iOS lets an element that was started by a tap play again later
+// without one, so every Start tap "arms" it with a silent clip. The tones are generated here
+// as small WAV files, so nothing is downloaded.
 
-function audio() {
-  if (!ctx) {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (AC) ctx = new AC();
+const RATE = 22050;
+const urls = {};
+let player = null;
+
+function wav(seconds, sampleAt) {
+  const n = Math.floor(seconds * RATE);
+  const buf = new ArrayBuffer(44 + n * 2);
+  const v = new DataView(buf);
+  const str = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); str(8, 'WAVE');
+  str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, RATE, true); v.setUint32(28, RATE * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  str(36, 'data'); v.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) {
+    const x = Math.max(-1, Math.min(1, sampleAt(i / RATE)));
+    v.setInt16(44 + i * 2, x * 32767, true);
   }
-  if (ctx?.state === 'suspended') ctx.resume();
-  return ctx;
+  return new Blob([buf], { type: 'audio/wav' });
+}
+
+/** Sum of short tone blips: [startSec, freqHz, lengthSec]. */
+function tones(blips, total, gain = 0.8) {
+  return wav(total, (t) => {
+    let y = 0;
+    for (const [at, f, len] of blips) {
+      const d = t - at;
+      if (d < 0 || d > len) continue;
+      const env = Math.min(1, d / 0.012) * Math.exp(-4.5 * d / len);
+      y += Math.sin(2 * Math.PI * f * d) * env;
+    }
+    return y * gain;
+  });
+}
+
+const SOUNDS = {
+  silence: () => wav(0.15, () => 0),
+  pip: () => tones([[0, 880, 0.14]], 0.2, 1),
+  double: () => tones([[0, 1320, 0.13], [0.18, 1320, 0.13]], 0.36, 1),
+  done: () => tones([[0, 1046.5, 0.25], [0.2, 1318.5, 0.25], [0.4, 1568, 0.45]], 0.9, 0.85),
+  chime: () => tones([[0, 1046.5, 0.5], [0.16, 1568, 0.5], [0.55, 1046.5, 0.5], [0.71, 1568, 0.6]], 1.35, 0.62),
+};
+
+function soundUrl(name) {
+  if (!urls[name]) urls[name] = URL.createObjectURL(SOUNDS[name]());
+  return urls[name];
+}
+
+function getPlayer() {
+  if (!player) {
+    player = new Audio();
+    player.setAttribute('playsinline', '');
+    player.preload = 'auto';
+  }
+  return player;
+}
+
+/** Play a cue. Resolves when playback starts; rejects if the browser blocks it. */
+export function playSound(name) {
+  const el = getPlayer();
+  el.src = soundUrl(name);
+  el.currentTime = 0;
+  return el.play();
 }
 
 function beep(count = 1) {
-  const ac = audio();
-  if (!ac) return;
-  for (let i = 0; i < count; i++) {
-    const t0 = ac.currentTime + i * 0.18;
-    const o = ac.createOscillator();
-    const g = ac.createGain();
-    o.frequency.value = count === 1 ? 880 : 1320;
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(0.5, t0 + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.14);
-    o.connect(g).connect(ac.destination);
-    o.start(t0);
-    o.stop(t0 + 0.16);
-  }
+  playSound(count === 1 ? 'pip' : count === 2 ? 'double' : 'done').catch(() => {});
 }
 
 function say(text, interrupt = false) {
@@ -149,41 +195,27 @@ function say(text, interrupt = false) {
 }
 
 /**
- * Rest-timer alert: a bright two-tone chime repeated twice, then an optional spoken cue.
- * Plays over music (audio session set to 'transient' when the timer starts).
+ * Rest-timer alert: a bright two-tone chime (twice), then an optional spoken cue.
+ * Returns a promise that rejects if the phone blocked the sound.
  */
 export function restChime(withVoice = true) {
-  const ac = audio();
-  if (ac) {
-    [0, 0.45].forEach((offset) => {
-      [[1046.5, 0], [1568, 0.16]].forEach(([freq, dt]) => {
-        const t0 = ac.currentTime + offset + dt;
-        const o = ac.createOscillator();
-        const g = ac.createGain();
-        o.type = 'sine';
-        o.frequency.value = freq;
-        g.gain.setValueAtTime(0.0001, t0);
-        g.gain.exponentialRampToValueAtTime(0.9, t0 + 0.015);
-        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
-        o.connect(g).connect(ac.destination);
-        o.start(t0);
-        o.stop(t0 + 0.55);
-      });
-    });
-  }
-  if (withVoice) setTimeout(() => say('Rest’s up. Next set.', true), 900);
-  try { navigator.vibrate?.([200, 100, 200]); } catch { /* not supported on iPhone */ }
+  try { navigator.vibrate?.([200, 100, 200]); } catch { /* not on iPhone */ }
+  const played = playSound('chime');
+  played.then(() => {
+    if (withVoice) setTimeout(() => say('Rest’s up. Next set.', true), 1300);
+  }).catch(() => {});
+  return played;
 }
 
-/** Must be called from a tap so iOS allows sound and speech for the rest of the run. */
+/** Call from a tap (Start, Restart, Test) so iOS lets cues play later without one. */
 export function unlockAudio() {
   try {
-    // Ask iOS to treat our cues as short interruptions that duck other audio.
+    // Short sounds that play over (duck) other audio such as music, where supported.
     if (navigator.audioSession) navigator.audioSession.type = 'transient';
   } catch { /* unsupported */ }
-  audio();
+  playSound('silence').catch(() => {});
   if ('speechSynthesis' in window) {
-    const u = new SpeechSynthesisUtterance(' ');
+    const u = new SpeechSynthesisUtterance('ready');
     u.volume = 0;
     speechSynthesis.speak(u);
   }

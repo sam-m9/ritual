@@ -388,9 +388,10 @@ const actions = {
   },
 
   'rest-test'() {
-    unlockAudio();
     const mode = data().settings.restSound || 'voice';
-    restChime(mode !== 'chime');
+    restChime(mode !== 'chime')
+      .then(() => toast('Playing. Turn the volume up if it was quiet'))
+      .catch((err) => toast(`iPhone blocked the sound (${err?.name || 'error'}). Tap again`));
   },
 
   'lift-view'(el) {
