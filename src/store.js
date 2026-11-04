@@ -26,9 +26,10 @@ import { clone, today, uid } from './util.js';
 import AUSTIN_PACK from './packs/austin-2026-11.js';
 import AUSTIN_PACK_2 from './packs/austin-2026-11b.js';
 import AUSTIN_PACK_3 from './packs/austin-2026-11c.js';
+import GLOBAL_PACK from './packs/global-2026-11.js';
 
 /** Content packs shipped with the app, merged once into existing data. */
-const PACKS = [AUSTIN_PACK, AUSTIN_PACK_2, AUSTIN_PACK_3];
+const PACKS = [AUSTIN_PACK, AUSTIN_PACK_2, AUSTIN_PACK_3, GLOBAL_PACK];
 
 export const SCHEMA = 2;
 const DATA_KEY = 'ritual-v1';
