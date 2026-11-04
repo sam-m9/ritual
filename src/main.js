@@ -12,7 +12,7 @@ import { nutritionView } from './views/nutrition.js';
 import { progressView } from './views/progress.js';
 import { settingsView, recipeEditorView } from './views/settings.js';
 import { runView, runLiveView, runLogView, runPlanView, runLevelView, paintRun } from './views/run.js';
-import { runner, restChime, unlockAudio } from './runner.js';
+import { runner, restChime, unlockAudio, setAudioMode } from './runner.js';
 import { nextSession, applyResult, longestRunSec, totalSec } from './runplan.js';
 
 const root = document.getElementById('app');
@@ -22,6 +22,8 @@ let runDraft = null;
 let toastTimer = null;
 
 store.init();
+setAudioMode(store.data.settings.audioMode);
+
 // Open on the day in progress, or the next one in the rotation.
 store.ui.dayId = suggestedDayId(store.data);
 
@@ -381,6 +383,13 @@ const actions = {
     }
   },
 
+  'audio-mode'(el) {
+    data().settings.audioMode = el.dataset.v;
+    setAudioMode(el.dataset.v);
+    store.commit();
+    render();
+  },
+
   'rest-sound'(el) {
     data().settings.restSound = el.dataset.v;
     store.commit();
@@ -388,6 +397,7 @@ const actions = {
   },
 
   'rest-test'() {
+    unlockAudio();
     const mode = data().settings.restSound || 'voice';
     restChime(mode !== 'chime')
       .then(() => toast('Playing. Turn the volume up if it was quiet'))

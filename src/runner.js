@@ -117,6 +117,24 @@ export function buildCues(session, detail = 'full') {
 // without one, so every Start tap "arms" it with a silent clip. The tones are generated here
 // as small WAV files, so nothing is downloaded.
 
+// How cues share the speaker with your music (iOS Audio Session API, Safari only):
+//   mix       -> 'ambient'   plays on top of music; music keeps playing (silent switch may mute it)
+//   interrupt -> 'playback'  loudest and most reliable; pauses your music (resume it yourself)
+//   duck      -> 'transient' meant to lower music like Google Maps, but WebKit bugs make it
+//                silent on iOS 18+, so it's opt-in and experimental.
+const SESSION = { mix: 'ambient', interrupt: 'playback', duck: 'transient' };
+let audioMode = 'mix';
+
+export function setAudioMode(mode) {
+  audioMode = SESSION[mode] ? mode : 'mix';
+}
+
+function applySession() {
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = SESSION[audioMode];
+  } catch { /* unsupported */ }
+}
+
 const RATE = 22050;
 const urls = {};
 let player = null;
@@ -175,6 +193,7 @@ function getPlayer() {
 
 /** Play a cue. Resolves when playback starts; rejects if the browser blocks it. */
 export function playSound(name) {
+  if (name !== 'silence') applySession();
   const el = getPlayer();
   el.src = soundUrl(name);
   el.currentTime = 0;
@@ -187,6 +206,7 @@ function beep(count = 1) {
 
 function say(text, interrupt = false) {
   if (!text || !('speechSynthesis' in window)) return;
+  applySession();
   if (interrupt) speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.rate = 1;
@@ -209,10 +229,8 @@ export function restChime(withVoice = true) {
 
 /** Call from a tap (Start, Restart, Test) so iOS lets cues play later without one. */
 export function unlockAudio() {
-  try {
-    // Short sounds that play over (duck) other audio such as music, where supported.
-    if (navigator.audioSession) navigator.audioSession.type = 'transient';
-  } catch { /* unsupported */ }
+  // Arm with the mix session so a silent clip never pauses your music.
+  try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch { /* unsupported */ }
   playSound('silence').catch(() => {});
   if ('speechSynthesis' in window) {
     const u = new SpeechSynthesisUtterance('ready');
@@ -279,7 +297,7 @@ export const runner = {
     releaseScreen();
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     try { localStorage.removeItem(LIVE_KEY); } catch { /* ignore */ }
-    try { if (navigator.audioSession) navigator.audioSession.type = 'auto'; } catch { /* ignore */ }
+    try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch { /* ignore */ }
   },
 
   elapsedMs() {

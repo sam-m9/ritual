@@ -68,8 +68,17 @@ export function settingsView(data, ui) {
         <div class="seg" style="margin-top:8px">
           ${[['voice', 'Chime + voice'], ['chime', 'Chime'], ['off', 'Off']].map(([v, l]) => `<button class="${(s.restSound || 'voice') === v ? 'on' : ''}" data-act="rest-sound" data-v="${v}">${l}</button>`).join('')}
         </div>
-        <button class="btn block ghost" style="margin-top:8px" data-act="rest-test">Test sound</button>
-        <p class="fine" style="margin-top:8px">Plays over your music. Keep Ritual open and the ringer on; it can't ring while the phone is locked.</p>
+        <div class="label" style="margin-top:14px">With music playing</div>
+        <div class="seg" style="margin-top:8px">
+          ${[['mix', 'Mix'], ['interrupt', 'Interrupt'], ['duck', 'Duck (beta)']].map(([v, l]) => `<button class="${(s.audioMode || 'mix') === v ? 'on' : ''}" data-act="audio-mode" data-v="${v}">${l}</button>`).join('')}
+        </div>
+        <p class="fine" style="margin-top:8px">${{
+          mix: 'Mix: the cue plays on top of your music, which keeps going. Turn the ringer on, since the silent switch can mute it.',
+          interrupt: 'Interrupt: loudest and most reliable, but it pauses your music. Press play in your music app afterwards.',
+          duck: 'Duck: lowers your music like Google Maps. iOS 18 and later often plays this silently, so test it first.',
+        }[s.audioMode || 'mix']}</p>
+        <button class="btn block ghost" style="margin-top:8px" data-act="rest-test">Test sound (start your music first)</button>
+        <p class="fine" style="margin-top:8px">Keep Ritual open; it can't ring while the phone is locked. These settings also apply to the Run tab's cues.</p>
       </div>
 
       <div class="section-h"><h2>Nutrition</h2></div>

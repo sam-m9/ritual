@@ -41,7 +41,7 @@ export function defaultData() {
     app: 'ritual',
     schema: SCHEMA,
     updatedAt: new Date().toISOString(),
-    settings: { unit: 'lb', waistUnit: 'in', proteinMin: 170, proteinMax: 190, restSeconds: 60, restSound: 'voice' },
+    settings: { unit: 'lb', waistUnit: 'in', proteinMin: 170, proteinMax: 190, restSeconds: 60, restSound: 'voice', audioMode: 'mix' },
     program: clone(SEED_PROGRAM),
     current: {},
     sessions: [],
