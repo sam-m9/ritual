@@ -27,9 +27,10 @@ import AUSTIN_PACK from './packs/austin-2026-11.js';
 import AUSTIN_PACK_2 from './packs/austin-2026-11b.js';
 import AUSTIN_PACK_3 from './packs/austin-2026-11c.js';
 import GLOBAL_PACK from './packs/global-2026-11.js';
+import GLOBAL_PACK_2 from './packs/global-2026-11b.js';
 
 /** Content packs shipped with the app, merged once into existing data. */
-const PACKS = [AUSTIN_PACK, AUSTIN_PACK_2, AUSTIN_PACK_3, GLOBAL_PACK];
+const PACKS = [AUSTIN_PACK, AUSTIN_PACK_2, AUSTIN_PACK_3, GLOBAL_PACK, GLOBAL_PACK_2];
 
 export const SCHEMA = 2;
 const DATA_KEY = 'ritual-v1';
@@ -137,7 +138,10 @@ export function mergeRecipes(data, pack) {
     names.add(name.toLowerCase());
     groceries++;
   }
-  return { recipes, groceries };
+  const before = n.groceries.length;
+  mergeGroceries(n);
+  groceries -= before - n.groceries.length; // count only genuinely new lines
+  return { recipes, groceries: Math.max(0, groceries) };
 }
 
 function applyPacks(data) {
@@ -161,8 +165,11 @@ function applyPacks(data) {
 /** Near-duplicate grocery items folded into one line each (first match keeps its place). */
 const GROCERY_MERGES = [
   {
-    name: 'Spice rack: cumin (ground + seeds), coriander, smoked paprika, turmeric, garam masala, allspice, cardamom, chipotle + ancho powder, sumac, dried thyme, Aleppo, sesame seeds, bay leaves, black peppercorns (H-E-B / Whole Foods / Pantry)',
+    name: 'Spice rack: cumin (ground + seeds), coriander, smoked paprika, turmeric, garam masala, allspice, cardamom, chipotle + ancho powder, sumac, dried thyme, Aleppo, fennel seed, celery seed, mustard powder, Sichuan peppercorns, dried árbol chiles, sesame seeds, bay leaves, black peppercorns (H-E-B / Whole Foods / Pantry)',
     from: [
+      'Spice rack: cumin (ground + seeds), coriander, smoked paprika, turmeric, garam masala, allspice, cardamom, chipotle + ancho powder, sumac, dried thyme, Aleppo, sesame seeds, bay leaves, black peppercorns (H-E-B / Whole Foods / Pantry)',
+      'Ancho chile powder, chipotle powder, smoked paprika (H-E-B)', 'Fennel seed and celery seed (H-E-B)',
+      'Sichuan peppercorns (Whole Foods)', 'Dried árbol chiles (H-E-B)',
       'Spices: cumin, coriander, smoked paprika, turmeric, garam masala, allspice, cardamom, chipotle powder, sumac, dried thyme, Aleppo (Pantry)',
       "Za'atar spices: dried thyme, sumac, sesame (Pantry)",
       'Ground allspice (H-E-B)', 'Ground cardamom (H-E-B)', 'Smoked paprika (H-E-B)', 'Sumac (Whole Foods)',
@@ -179,16 +186,23 @@ const GROCERY_MERGES = [
     ],
   },
   {
-    name: 'Cottage cheese 32 oz: H-E-B Mootopia or Good Culture 2% (H-E-B)',
-    from: ['H-E-B Mootopia Small Curd Cottage Cheese 32 oz (H-E-B)'],
+    name: 'Cottage cheese 32 oz: H-E-B Mootopia or Good Culture 2% (H-E-B / Whole Foods)',
+    from: [
+      'H-E-B Mootopia Small Curd Cottage Cheese 32 oz (H-E-B)',
+      'Cottage cheese 32 oz: H-E-B Mootopia or Good Culture 2% (H-E-B)',
+      'Good Culture 2% cottage cheese (H-E-B or Whole Foods)',
+    ],
   },
   {
     name: "Canned chickpeas, low-sodium or 365 Organic (H-E-B / Trader Joe's / Whole Foods)",
     from: ["Canned Low-Sodium Chickpeas (H-E-B / Trader Joe's)", '365 Organic Garbanzo Beans, 2 cans (Whole Foods)'],
   },
   {
-    name: 'Tamari, low-sodium, no added sugar, check label (Whole Foods)',
-    from: ['Low-Sodium Tamari or Soy Sauce (Pantry)', 'Gluten-free tamari, check label (Whole Foods)'],
+    name: 'Tamari, low-sodium, no added sugar, check label (Whole Foods / H-E-B)',
+    from: [
+      'Low-Sodium Tamari or Soy Sauce (Pantry)', 'Gluten-free tamari, check label (Whole Foods)',
+      'Tamari, low-sodium, no added sugar, check label (Whole Foods)', 'Reduced-sodium tamari (H-E-B or Whole Foods)',
+    ],
   },
   {
     name: 'Feta in brine and cotija (H-E-B / Whole Foods)',
@@ -208,7 +222,10 @@ const GROCERY_MERGES = [
   },
   {
     name: "Trader Joe's frozen rice pouches, jasmine and brown (Trader Joe's)",
-    from: ["Trader Joe's Frozen Organic Jasmine Rice Pouches (Trader Joe's)", "Trader Joe's Frozen Brown Rice Pouches (Trader Joe's)"],
+    from: [
+      "Trader Joe's Frozen Organic Jasmine Rice Pouches (Trader Joe's)", "Trader Joe's Frozen Brown Rice Pouches (Trader Joe's)",
+      "Trader Joe's frozen Organic Jasmine Rice (Trader Joe's)",
+    ],
   },
   {
     name: "Trader Joe's High Protein Organic Super Firm Tofu, plus one backup in the freezer (Trader Joe's)",
@@ -217,6 +234,30 @@ const GROCERY_MERGES = [
   {
     name: 'Vinegars: distilled or apple cider, unseasoned rice (H-E-B), sherry (Whole Foods)',
     from: ['Distilled or apple cider vinegar for pickling (H-E-B)', 'Unseasoned rice vinegar (H-E-B)', 'Sherry vinegar (Whole Foods)'],
+  },
+  {
+    name: "Rao's Homemade Marinara (H-E-B / Whole Foods)",
+    from: ["Rao's Homemade Marinara Sauce (H-E-B / Whole Foods)", "Rao's Homemade Marinara (H-E-B or Whole Foods)"],
+  },
+  {
+    name: 'Meal Simple Original or H-E-B Natural Rotisserie Chicken (H-E-B)',
+    from: ['Meal Simple by H-E-B Rotisserie Chicken - Original (H-E-B)'],
+  },
+  {
+    name: "Dry-roasted unsalted peanuts (Trader Joe's / H-E-B)",
+    from: ["Dry-roasted unsalted peanuts (Trader Joe's)", 'Dry-roasted unsalted peanuts (H-E-B)'],
+  },
+  {
+    name: 'Tomato paste and crushed tomatoes (H-E-B)',
+    from: ['Canned crushed tomatoes (H-E-B)'],
+  },
+  {
+    name: 'Corn tortillas: corn, water, lime, check label (H-E-B)',
+    from: ['Corn tortillas (H-E-B)'],
+  },
+  {
+    name: "Raw shrimp: TJ Argentinian red or H-E-B peeled & deveined (Trader Joe's / H-E-B)",
+    from: ["Wild Raw Argentinian Red Shrimp, 1 lb frozen (Trader Joe's)", 'Raw peeled deveined shrimp (H-E-B Fish Market)'],
   },
 ];
 
