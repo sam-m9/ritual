@@ -28,6 +28,7 @@ function exerciseEditor(day, ex) {
           </select></div>
       </div>
       <input class="field" type="url" inputmode="url" value="${esc(ex.url)}" placeholder="Form video link (YouTube, etc.)" data-in="ex" data-field="url" ${attrs}>
+      <input class="field" value="${esc(ex.cue || '')}" placeholder="Cue (optional), e.g. superset with #5, pause at stretch" data-in="ex" data-field="cue" ${attrs}>
     </div>`;
 }
 

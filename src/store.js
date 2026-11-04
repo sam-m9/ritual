@@ -325,6 +325,27 @@ const REVISIONS = [
     },
   },
   {
+    // Nov 5: full recomp / lean-bulk program. Finished sessions and lift history are never
+    // touched. Exercises keep their id (and so their in-progress sets and saved video links)
+    // when the movement stays; in-progress sets for removed exercises are dropped.
+    id: 'program-recomp-2026-11-05',
+    apply(data) {
+      for (const src of SEED_PROGRAM) {
+        const day = data.program.find((d) => d.id === src.id);
+        if (!day) { data.program.push(clone(src)); continue; }
+        const urlById = new Map(day.exercises.map((e) => [e.id, e.url]));
+        const urlByName = new Map(day.exercises.map((e) => [String(e.name).toLowerCase(), e.url]));
+        Object.assign(day, { name: src.name, focus: src.focus, note: src.note, optional: src.optional, noRir: src.noRir });
+        day.exercises = src.exercises.map((e) => ({
+          ...e, url: urlById.get(e.id) || urlByName.get(e.name.toLowerCase()) || e.url,
+        }));
+        const keep = new Set(day.exercises.map((e) => e.id));
+        const cur = data.current?.[day.id];
+        if (cur?.sets) for (const k of Object.keys(cur.sets)) if (!keep.has(k)) delete cur.sets[k];
+      }
+    },
+  },
+  {
     // Nov 4: fold near-duplicate grocery items (spices, yogurts, tamari, oils, etc.) into one line each.
     id: 'groc-merge-2026-11-04',
     apply(data) {

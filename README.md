@@ -4,7 +4,7 @@ A personal, phone-first training and nutrition log. You add it to your iPhone Ho
 
 ## What it does
 
-- **Train**: a 4-day program (Upper A, Legs, Upper B (pull), Upper C, plus an optional Pump day). For every set you get weight and reps fields and a check box. "Last time" shows what you lifted before. Checking a blank set fills it from last time. A day is finished by "Finish & log" (or "Finish early"). The app then opens on the **next day in the rotation**, so a missed gym day never breaks the order. The optional Pump day is skipped in the rotation; tap its pill when you want it.
+- **Train**: a recomp / lean-bulk program: 4 firm days (Upper A push, Legs once and hard, Upper B pull, Upper C chest & arms) plus an optional Pump day. For every set you get weight and reps fields and a check box. "Last time" shows what you lifted before. Checking a blank set fills it from last time. A day is finished by "Finish & log" (or "Finish early"). The app then opens on the **next day in the rotation**, so a missed gym day never breaks the order. The optional Pump day is skipped in the rotation; tap its pill when you want it.
 - **Run**: a guided plan from about 1–3 minutes of running to 30 minutes non-stop (Foundation, weeks 1–9), then a 5K block (weeks 10–14) and a 10K block (weeks 15–24). Every session is time-based run-walk at talking pace. A full-screen guided timer speaks cues over your music ("Run. A minute and a half. Easy pace…"), with countdown beeps and a black pocket screen. After each run you log breathing, effort and pain, and the plan adapts:
   - good run: next session
   - gasping, effort 8+ or stopped early: repeat the session

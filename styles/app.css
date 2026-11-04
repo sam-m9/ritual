@@ -524,3 +524,4 @@ select.field { appearance: none; -webkit-appearance: none; }
 .plan-runs li { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13.5px; font-weight: 600; }
 .plan-runs li.done span:first-child { text-decoration: line-through; color: var(--muted); }
 .plan-runs .label { color: var(--muted); white-space: nowrap; }
+.ex-cue { font-family: var(--mono); font-size: 10.5px; line-height: 1.45; color: var(--muted); margin-top: 4px; }

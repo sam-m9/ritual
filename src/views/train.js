@@ -44,7 +44,7 @@ function exerciseCard(data, ui, day, ex) {
   if (done) {
     sub = `<div class="ex-sum label">${sets.length}/${sets.length} sets done${summary ? ` · <b>${esc(summary)}</b>` : ''}</div>`;
   } else if (expanded) {
-    sub = `<div class="ex-rx"><span class="rx">${esc(ex.sets)} × ${esc(ex.reps)}</span>${effortTag(ex, day)}</div>`;
+    sub = `<div class="ex-rx"><span class="rx">${esc(ex.sets)} × ${esc(ex.reps)}</span>${effortTag(ex, day)}</div>${ex.cue ? `<div class="ex-cue">${esc(ex.cue)}</div>` : ''}`;
   } else {
     sub = `<div class="ex-sum label"><b>${esc(ex.sets)} × ${esc(ex.reps)}</b>${checked ? ` · ${checked}/${sets.length} done` : ''}</div>`;
   }

@@ -1,36 +1,41 @@
 // Seed data for a fresh install. Everything here is editable in the app.
 //
 // Exercise fields:
-//   name, sets (number), reps (string range), effort, eq, url
+//   name, sets (number), reps (string range), effort, eq, url, cue (short how-to shown under the name)
 // Day fields: id, num, name, focus, note (coaching cue shown under the title), optional, noRir
 //   effort: RIR string like "2" or "1-2"; "FAIL" = to failure on the last set only; "" = none
 //   eq: "db" | "bar" | "cable" | "machine" | "body"
 
-const ex = (id, name, sets, reps, effort, eq) => ({ id, name, sets, reps, effort, eq, url: '' });
+const ex = (id, name, sets, reps, effort, eq, cue = '') => ({ id, name, sets, reps, effort, eq, url: '', cue });
+
+// Recomp / lean-bulk plan: 4 firm days + optional 5th. Upper-focused, legs once and hard.
+// History is matched by exercise name, so names are kept stable when the movement is the same.
+const PROGRESSION = 'Compounds 1-3 RIR, isolation 0-1, last set to failure. Progression: hit the top of the rep range on every set, then add the smallest weight next time.';
 
 export const SEED_PROGRAM = [
   {
-    id: 'd1', num: 1, name: 'Upper A', focus: 'Push-leaning', optional: false, noRir: false, note: '',
+    id: 'd1', num: 1, name: 'Upper A', focus: 'Push', optional: false, noRir: false, note: PROGRESSION,
     exercises: [
-      ex('d1e1', 'Flat dumbbell press', 3, '6-10', '2', 'db'),
+      ex('d1e1', 'Flat dumbbell press', 3, '6-10', '1-2', 'db'),
       ex('d1e2', 'Chest-supported row', 3, '8-12', '1-2', 'machine'),
       ex('d1e3', 'Incline dumbbell press', 3, '8-12', '1-2', 'db'),
       ex('d1e4', 'Lat pulldown', 3, '10-12', '1-2', 'cable'),
-      ex('d1e5', 'Dumbbell lateral raise', 3, '12-20', '0-1', 'db'),
+      ex('d1e5', 'Dumbbell lateral raise', 3, '12-20', '0-1', 'db', 'Superset with rear-delt fly'),
+      ex('d1e8', 'Rear-delt fly', 2, '15-20', '0-1', 'db', 'Superset with lateral raise'),
       ex('d1e6', 'Cable triceps pushdown', 2, '10-15', 'FAIL', 'cable'),
       ex('d1e7', 'EZ-bar curl', 2, '8-12', 'FAIL', 'bar'),
     ],
   },
   {
-    id: 'd2', num: 2, name: 'Legs', focus: 'Your one full lower day', optional: false, noRir: false,
-    note: "Give this day everything, don't rush it. It's your main lower-body stimulus for the week.",
+    id: 'd2', num: 2, name: 'Legs', focus: 'One hard heavy day', optional: false, noRir: false,
+    note: 'Squat and RDL get full rest and your best effort; the machine work buries the legs after.',
     exercises: [
-      ex('d2e1', 'Back squat', 3, '5-8', '2', 'bar'),
-      ex('d2e2', 'Romanian deadlift', 3, '8-10', '2', 'bar'),
-      ex('d2e3', 'Leg press', 3, '10-15', '1', 'machine'),
-      ex('d2e4', 'Seated leg curl', 3, '10-15', '0-1', 'machine'),
-      ex('d2e5', 'Standing calf raise', 4, '10-15', '0-1', 'machine'),
-      ex('d2e6', 'Hanging leg raise', 3, '10-15', '1', 'body'),
+      ex('d2e1', 'Back squat', 3, '5-8', '1-2', 'bar'),
+      ex('d2e2', 'Romanian deadlift', 3, '6-10', '2', 'bar'),
+      ex('d2e3', 'Leg press', 3, '10-15', '0-1', 'machine'),
+      ex('d2e4', 'Seated leg curl', 4, '8-12', '0-1', 'machine', 'Lengthened partials on the last set · superset with leg extension'),
+      ex('d2e7', 'Leg extension', 3, '10-15', '0-1', 'machine', 'Superset with seated leg curl'),
+      ex('d2e5', 'Standing calf raise', 4, '8-15', '0-1', 'machine', 'Pause at the stretch'),
     ],
   },
   {
@@ -39,18 +44,20 @@ export const SEED_PROGRAM = [
       ex('d3e1', 'Overhead press', 3, '6-10', '2', 'bar'),
       ex('d3e2', 'Weighted pull-up or lat pulldown', 3, '8-12', '1-2', 'body'),
       ex('d3e3', 'Seated cable row', 3, '10-12', '1-2', 'cable'),
-      ex('d3e8', 'Single-arm dumbbell row', 3, '8-12', '1-2', 'db'),
-      ex('d3e6', 'Face pull', 3, '15-20', '0-1', 'cable'),
+      ex('d3e8', 'Single-arm dumbbell row', 2, '8-12', '1-2', 'db'),
+      ex('d3e6', 'Face pull', 3, '15-20', '0-1', 'cable', 'Superset with hanging leg raise'),
+      ex('d3e9', 'Hanging leg raise', 3, '10-15', '1', 'body', 'Superset with face pull'),
       ex('d3e7', 'Incline dumbbell curl', 3, '10-15', 'FAIL', 'db'),
+      ex('d3e10', 'Overhead cable triceps extension', 2, '10-15', 'FAIL', 'cable'),
     ],
   },
   {
-    id: 'd4', num: 4, name: 'Upper C', focus: 'Chest & arms detail', optional: false, noRir: false,
-    note: "Flye cues: soft fixed bend in the elbows, hug and squeeze, don't let it turn into a press. High-to-low finishes with hands crossing low at the waist; low-to-high finishes with hands meeting at upper-chest height.",
+    id: 'd4', num: 4, name: 'Upper C', focus: 'Chest & arms', optional: false, noRir: false,
+    note: "Flye cue: soft fixed elbow bend, hug and squeeze, don't let it become a press.",
     exercises: [
       ex('d4e1', 'Incline dumbbell press', 3, '8-12', '1-2', 'db'),
-      ex('d4e2', 'High-to-low cable fly', 3, '12-15', '0-1', 'cable'),
       ex('d4e3', 'Low-to-high cable fly', 3, '12-15', '0-1', 'cable'),
+      ex('d4e7', 'Cable lateral raise', 3, '12-20', '0-1', 'cable'),
       ex('d4e4', 'Dumbbell lateral raise', 3, '12-20', '0-1', 'db'),
       ex('d4e5', 'Overhead cable triceps extension', 3, '10-15', 'FAIL', 'cable'),
       ex('d4e6', 'Cable curl', 3, '10-15', 'FAIL', 'cable'),
@@ -58,14 +65,15 @@ export const SEED_PROGRAM = [
   },
   {
     id: 'd5', num: 5, name: 'Pump', focus: 'Weak points · optional', optional: true, noRir: true,
-    note: 'On a week legs feel like they deserve more, swap this optional day for a second short leg session instead.',
+    note: 'True bonus, not required. Lateral raises first while fresh.',
     exercises: [
-      ex('d5e1', 'Lateral raise', 3, '15-25', '', 'db'),
-      ex('d5e2', 'Face pull', 3, '15-20', '', 'cable'),
+      ex('d5e1', 'Lateral raise', 3, '15-25', '', 'cable', 'Cable or dumbbell'),
+      ex('d5e5', 'Rear-delt fly', 3, '15-20', '', 'db'),
       ex('d5e3', 'Cable curl', 3, '12-15', '', 'cable'),
       ex('d5e4', 'Triceps pushdown', 3, '12-15', '', 'cable'),
-      ex('d5e5', 'Rear-delt fly', 3, '15-20', '', 'db'),
-      ex('d5e6', 'Cable crunch or hanging leg raise', 3, '12-15', '', 'cable'),
+      ex('d5e7', 'Leg extension', 2, '12-15', '', 'machine', 'Superset with seated leg curl'),
+      ex('d5e8', 'Seated leg curl', 2, '12-15', '', 'machine', 'Superset with leg extension'),
+      ex('d5e6', 'Cable crunch', 3, '12-15', '', 'cable'),
     ],
   },
 ];
