@@ -34,21 +34,19 @@ export const SEED_PROGRAM = [
     ],
   },
   {
-    id: 'd3', num: 3, name: 'Upper B', focus: 'Pull-leaning + leg top-up', optional: false, noRir: false,
-    note: 'Leg press and leg curl are the leg top-up, your light second hit. Honest effort, no need to grind.',
+    id: 'd3', num: 3, name: 'Upper B', focus: 'Pull', optional: false, noRir: false, note: '',
     exercises: [
       ex('d3e1', 'Overhead press', 3, '6-10', '2', 'bar'),
       ex('d3e2', 'Weighted pull-up or lat pulldown', 3, '8-12', '1-2', 'body'),
       ex('d3e3', 'Seated cable row', 3, '10-12', '1-2', 'cable'),
-      ex('d3e4', 'Leg press', 3, '10-15', '1-2', 'machine'),
-      ex('d3e5', 'Seated leg curl', 2, '12-15', 'FAIL', 'machine'),
+      ex('d3e8', 'Single-arm dumbbell row', 3, '8-12', '1-2', 'db'),
       ex('d3e6', 'Face pull', 3, '15-20', '0-1', 'cable'),
-      ex('d3e7', 'Incline dumbbell curl', 2, '10-15', 'FAIL', 'db'),
+      ex('d3e7', 'Incline dumbbell curl', 3, '10-15', 'FAIL', 'db'),
     ],
   },
   {
     id: 'd4', num: 4, name: 'Upper C', focus: 'Chest & arms detail', optional: false, noRir: false,
-    note: "The look day. Soft fixed elbow bend on the flyes, squeeze and hug, don't let it become a press. High-to-low finishes with hands crossing low at your waist; low-to-high finishes with hands meeting at upper-chest height.",
+    note: "Flye cues: soft fixed bend in the elbows, hug and squeeze, don't let it turn into a press. High-to-low finishes with hands crossing low at the waist; low-to-high finishes with hands meeting at upper-chest height.",
     exercises: [
       ex('d4e1', 'Incline dumbbell press', 3, '8-12', '1-2', 'db'),
       ex('d4e2', 'High-to-low cable fly', 3, '12-15', '0-1', 'cable'),
@@ -60,7 +58,7 @@ export const SEED_PROGRAM = [
   },
   {
     id: 'd5', num: 5, name: 'Pump', focus: 'Weak points · optional', optional: true, noRir: true,
-    note: 'On a week legs feel like they deserve more, swap this for a second short leg session instead.',
+    note: 'On a week legs feel like they deserve more, swap this optional day for a second short leg session instead.',
     exercises: [
       ex('d5e1', 'Lateral raise', 3, '15-25', '', 'db'),
       ex('d5e2', 'Face pull', 3, '15-20', '', 'cable'),

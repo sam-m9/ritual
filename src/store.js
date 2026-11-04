@@ -303,6 +303,28 @@ const REVISIONS = [
     },
   },
   {
+    // Nov 5: Day 3 becomes a pure pull day (no leg top-up the day after Legs).
+    // Only Day 3's exercise list and the Day 4/5 notes change. Logged sessions, history,
+    // Day 1 and Day 2 are untouched; in-progress Day 3 sets are kept for exercises that remain.
+    id: 'program-d3-pull-2026-11-05',
+    apply(data) {
+      const seed = (id) => SEED_PROGRAM.find((d) => d.id === id);
+      const d3 = data.program.find((d) => d.id === 'd3');
+      if (d3) {
+        const urls = new Map(d3.exercises.map((e) => [e.id, e.url]));
+        Object.assign(d3, { focus: seed('d3').focus, note: seed('d3').note });
+        d3.exercises = seed('d3').exercises.map((e) => ({ ...e, url: urls.get(e.id) || e.url }));
+        const keep = new Set(d3.exercises.map((e) => e.id));
+        const cur = data.current?.d3;
+        if (cur?.sets) for (const k of Object.keys(cur.sets)) if (!keep.has(k)) delete cur.sets[k];
+      }
+      for (const id of ['d4', 'd5']) {
+        const day = data.program.find((d) => d.id === id);
+        if (day) day.note = seed(id).note;
+      }
+    },
+  },
+  {
     // Nov 4: fold near-duplicate grocery items (spices, yogurts, tamari, oils, etc.) into one line each.
     id: 'groc-merge-2026-11-04',
     apply(data) {

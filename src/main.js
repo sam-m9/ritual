@@ -645,6 +645,7 @@ root.addEventListener('input', (e) => {
     if (el.dataset.field === 'w') {
       // A typed weight flows down to the untouched sets below it, live, without stealing focus.
       set.t = true;
+      set.a = false;
       setsFor(d, store.ui.dayId, ex);
       root.querySelectorAll(`[data-in="set"][data-field="w"][data-ex="${ex.id}"]`).forEach((input) => {
         if (input !== el) input.value = sets[Number(input.dataset.i)].w;

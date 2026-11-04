@@ -27,12 +27,15 @@ export function carryWeights(data, ex, list) {
   const last = lastEntry(data, ex.name)?.sets || [];
   let live = null;
   list.forEach((s, i) => {
+    // A value that wasn't auto-filled (a) was typed by you, even before typing was tracked: keep it.
+    if (s.w !== '' && !s.a && !s.t) s.t = true;
     if (s.t || s.c) {
       if (s.w !== '') live = s.w;
       return;
     }
     const prev = (last[i] || last.at(-1))?.w;
     s.w = live ?? (prev != null ? String(prev) : '');
+    s.a = s.w !== '';
   });
 }
 
