@@ -63,17 +63,6 @@ function recipeSection(data, ui, cat) {
 export function nutritionView(data, ui) {
   const n = data.nutrition;
   const s = data.settings;
-  const doneCount = n.meals.filter((m) => n.today.done[m.id]).length;
-
-  const meals = n.meals.map((m) => {
-    const on = !!n.today.done[m.id];
-    return `
-      <button class="card meal" data-act="toggle-meal" data-id="${m.id}" aria-pressed="${on}">
-        <span class="check ${on ? 'on' : ''}">${ICON.check}</span>
-        <span><h3>${esc(m.name)}</h3><p>${esc(m.portions)}</p></span>
-      </button>`;
-  }).join('');
-
   const portions = n.portions.map((p) => `
     <div class="card"><div class="label">${esc(p.label)}</div><div class="v">${esc(p.value)}</div></div>`).join('');
 
@@ -113,8 +102,6 @@ export function nutritionView(data, ui) {
         <div class="big">${esc(target)}<small>g</small></div>
       </section>
 
-      <div class="section-h"><h2>Meals today</h2><span class="count">${doneCount} / ${n.meals.length}</span></div>
-      ${meals}
 
       <div class="section-h"><h2>Hand portions</h2></div>
       <div class="portions">${portions}</div>
