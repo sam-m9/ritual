@@ -357,6 +357,34 @@ const REVISIONS = [
     },
   },
   {
+    // Nov 5 (later): program per the new day-by-day plan (big lifts, then arms, then delts).
+    // Same rules as above, and your own rest / body-part choices are kept for unchanged slots.
+    id: 'program-daybyday-2026-11-05',
+    apply(data) {
+      for (const src of SEED_PROGRAM) {
+        const day = data.program.find((d) => d.id === src.id);
+        if (!day) { data.program.push(clone(src)); continue; }
+        const oldById = new Map(day.exercises.map((e) => [e.id, e]));
+        const urlByName = new Map(day.exercises.map((e) => [String(e.name).toLowerCase(), e.url]));
+        Object.assign(day, { name: src.name, focus: src.focus, note: src.note, optional: src.optional, noRir: src.noRir });
+        day.exercises = src.exercises.map((e) => {
+          const old = oldById.get(e.id);
+          const same = old && String(old.name).toLowerCase() === e.name.toLowerCase();
+          return {
+            ...e,
+            url: (same && old.url) || urlByName.get(e.name.toLowerCase()) || e.url,
+            ...(same && old.rest ? { rest: old.rest } : {}),
+            ...(same && old.muscle ? { muscle: old.muscle } : {}),
+          };
+        });
+        const keep = new Set(day.exercises.map((e) => e.id));
+        const cur = data.current?.[day.id];
+        if (cur?.sets) for (const k of Object.keys(cur.sets)) if (!keep.has(k)) delete cur.sets[k];
+        if (cur?.swaps) for (const k of Object.keys(cur.swaps)) if (!keep.has(k)) delete cur.swaps[k];
+      }
+    },
+  },
+  {
     // Nov 4: fold near-duplicate grocery items (spices, yogurts, tamari, oils, etc.) into one line each.
     id: 'groc-merge-2026-11-04',
     apply(data) {

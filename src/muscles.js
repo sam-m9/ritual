@@ -17,7 +17,7 @@ export const muscleLabel = (id) => MUSCLES.find((m) => m.id === id)?.label || 'O
 // Order matters: more specific patterns first.
 const RULES = [
   ['core', /leg raise|crunch|plank|pallof|woodchop|ab wheel|sit-?up|dead bug/i],
-  ['shoulders', /lateral raise|rear-?delt|face pull|overhead press|shoulder press|military|arnold|upright row|reverse fly/i],
+  ['shoulders', /lateral raise|rear-?delt|face pull|overhead press|shoulder press|military|arnold|upright row|reverse fly|reverse pec|rear delt/i],
   ['legs', /squat|deadlift|rdl|leg press|leg curl|leg extension|lunge|calf|hip thrust|glute|hack|step-?up|adductor|abductor/i],
   ['chest', /bench|chest press|dumbbell press|incline.*press|fly|flye|push-?up|pec/i],
   ['arms', /curl|triceps|tricep|\btri\b|pushdown|skull|dip|hammer/i],
