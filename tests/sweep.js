@@ -68,7 +68,7 @@ const URL = 'http://localhost:8765/';
   }
 
   // ----- screens: name -> how to get there -----
-  const openAll = { 'sec:meal': true, 'sec:snack': true, 'sec:dessert': true, 'sec:prep': true, 'run:settings': true, 'learn:talk': true };
+  const openAll = { 'sec:meal': true, 'sec:snack': true, 'sec:dessert': true, 'sec:prep': true, 'run:settings': true, 'learn:talk': true, 'run:learn': true };
   const screens = [
     ['today', async () => {}],
     ['train', async () => { await p.click('[data-tab="train"]'); }],

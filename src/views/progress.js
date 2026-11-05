@@ -4,23 +4,21 @@ import { muscleLabel } from '../muscles.js';
 
 const bars = (values) => `<div class="bars">${barHeights(values).map((h) => `<i style="height:${h}%"></i>`).join('')}</div>`;
 
-function trendCard(title, list, unit, metric) {
-  if (!list.length) {
-    return `<section class="card trend"><h3>${title}</h3><p class="empty" style="margin-top:6px">Nothing logged yet.</p></section>`;
-  }
-  const recent = list.slice(-8);
+/** One column of the Body card: latest value, change, a small sparkline. */
+function trendCol(title, list, unit, metric) {
+  if (!list.length) return `<div class="tcol"><span class="label">${title}</span><b class="tval">—</b><span class="tdelta">Log your first</span></div>`;
   const latest = list.at(-1);
   const first = list[0];
   const delta = latest.v - first.v;
-  const deltaText = list.length > 1 ? `${delta > 0 ? '+' : ''}${fmt(delta)} since ${shortDate(first.d)}` : '';
+  const recent = list.slice(-8);
   return `
-    <section class="card trend">
-      <div class="trend-top"><h3>${title}</h3><span class="val">${fmt(latest.v)}<small>${unit}</small></span></div>
-      ${recent.length > 1 ? bars(recent.map((e) => e.v)) : ''}
-      <div class="entries" style="${recent.length > 1 ? '' : 'margin-top:8px'}">${list.slice(-4).reverse().map((e) => `<span>${shortDate(e.d)} · <b>${fmt(e.v)}</b></span>`).join('')}</div>
-      ${deltaText ? `<p class="fine" style="margin-top:8px">${esc(deltaText)}</p>` : ''}
-      <button class="undo" data-act="undo-metric" data-metric="${metric}">Remove last entry</button>
-    </section>`;
+    <div class="tcol">
+      <span class="label">${title}</span>
+      <b class="tval">${fmt(latest.v)}<small> ${unit}</small></b>
+      <span class="tdelta">${list.length > 1 ? `${delta > 0 ? '+' : ''}${fmt(delta)} since ${shortDate(first.d)}` : shortDate(latest.d)}</span>
+      ${recent.length > 1 ? `<div class="bars spark">${barHeights(recent.map((e) => e.v)).map((h) => `<i style="height:${h}%"></i>`).join('')}</div>` : ''}
+      <button class="undo" data-act="undo-metric" data-metric="${metric}">Remove last</button>
+    </div>`;
 }
 
 function liftCard(lift, unit, tag) {
@@ -77,28 +75,29 @@ export function progressView(data, ui = {}) {
 
   return `
     <div class="stack">
-      <div class="quick">
-        <form class="card" data-form="log-metric" data-metric="weight">
-          <div class="label">Bodyweight · ${unit}</div>
-          <input class="num" name="v" inputmode="decimal" placeholder="${weight.length ? fmt(weight.at(-1).v) : '—'}" aria-label="Bodyweight">
-          <button class="btn" type="submit">LOG</button>
+      <section class="card quick-log">
+        <form class="ql-row" data-form="log-metric" data-metric="weight">
+          <span class="label">Bodyweight · ${unit}</span>
+          <input class="field" name="v" inputmode="decimal" placeholder="${weight.length ? fmt(weight.at(-1).v) : '—'}" aria-label="Bodyweight">
+          <button class="btn" type="submit">Log</button>
         </form>
-        <form class="card" data-form="log-metric" data-metric="waist">
-          <div class="label">Waist · ${wUnit}</div>
-          <input class="num" name="v" inputmode="decimal" placeholder="${waist.length ? fmt(waist.at(-1).v) : '—'}" aria-label="Waist">
-          <button class="btn" type="submit">LOG</button>
+        <form class="ql-row" data-form="log-metric" data-metric="waist">
+          <span class="label">Waist · ${wUnit}</span>
+          <input class="field" name="v" inputmode="decimal" placeholder="${waist.length ? fmt(waist.at(-1).v) : '—'}" aria-label="Waist">
+          <button class="btn" type="submit">Log</button>
         </form>
-      </div>
+      </section>
 
-      <div class="card ink note">Scale weight should stay flat while waist drops and lifts rise.</div>
 
-      <div class="stats">
-        <div class="card"><div class="label">This week</div><div class="big">${wk.thisWeek}<small> / ${wk.planned}</small></div></div>
-        <div class="card"><div class="label">Rituals kept</div><div class="big">${wk.total}</div></div>
-      </div>
+      <section class="card body-card">
+        <div class="body-cols">${trendCol('Bodyweight', weight, unit, 'weight')}${trendCol('Waist', waist, wUnit, 'waist')}</div>
+        <p class="fine body-hint">Recomp check: scale flat, waist down, lifts up.</p>
+      </section>
 
-      ${trendCard('Bodyweight', weight, unit, 'weight')}
-      ${trendCard('Waist', waist, wUnit, 'waist')}
+      <section class="card week-row">
+        <div><span class="label">This week</span><b>${wk.thisWeek}<small>/${wk.planned} lifts</small></b></div>
+        <div><span class="label">Rituals kept</span><b>${wk.total}</b></div>
+      </section>
 
       <div class="section-h"><h2>Lift history</h2></div>
       ${groups.length ? `

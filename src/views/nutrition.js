@@ -88,8 +88,6 @@ function recipeSection(data, ui, cat) {
 export function nutritionView(data, ui) {
   const n = data.nutrition;
   const s = data.settings;
-  const portions = n.portions.map((p) => `
-    <div class="card"><div class="label">${esc(p.label)}</div><div class="v">${esc(p.value)}</div></div>`).join('');
 
   // Shop by store: names carry the store in brackets, e.g. "Paneer (H-E-B / Whole Foods)".
   const STORES = [
@@ -137,16 +135,13 @@ export function nutritionView(data, ui) {
 
   return `
     <div class="stack">
-      <section class="card ink target">
-        <div class="label">Daily protein target</div>
-        <div class="big">${esc(target)}<small>g</small></div>
+      <section class="card ink nut-strip">
+        <div class="nut-target"><span class="label">Daily protein</span><b>${esc(target)}<small> g</small></b></div>
+        <div class="nut-por">${n.portions.map((p) => `<div><span class="label">${esc(p.label)}</span><b>${esc(p.value)}</b></div>`).join('')}</div>
+        <p class="nut-hint label">Per meal, by hand</p>
       </section>
 
-
-      <div class="section-h"><h2>Hand portions</h2></div>
-      <div class="portions">${portions}</div>
-
-      <div class="section-h"><h2>Cookbook</h2><span class="count">${n.recipes.length} recipes</span></div>
+      <div class="section-h nut-first"><h2>Cookbook</h2><span class="count">${n.recipes.length} recipes</span></div>
       ${cookbookTools(ui)}
       ${searching ? results : RECIPE_CATEGORIES.map((c) => recipeSection(data, ui, c)).join('')}
 

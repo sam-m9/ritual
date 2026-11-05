@@ -126,10 +126,10 @@ export function runView(data, ui) {
         <button data-act="run-level">Change level</button>
       </div>
 
-      <div class="stats">
-        <div class="card"><div class="label">This week</div><div class="big">${st.thisWeek}<small> / 3</small></div></div>
-        <div class="card"><div class="label">Longest run</div><div class="big">${st.longest ? mmss(st.longest) : '—'}</div></div>
-      </div>
+      <section class="card week-row">
+        <div><span class="label">This week</span><b>${st.thisWeek}<small>/3 runs</small></b></div>
+        <div><span class="label">Longest run</span><b>${st.longest ? mmss(st.longest) : '—'}</b></div>
+      </section>
 
       <button class="section-h section-link" data-act="run-plan"><h2>Week ${run.week}</h2><span class="count">${esc(wk.focus)} ›</span></button>
       <section class="card"><ul class="wk-list">${weekRuns}</ul>
@@ -139,8 +139,12 @@ export function runView(data, ui) {
       <button class="section-h section-link" data-act="run-plan"><h2>Journey</h2><span class="count">${run.week} / ${LAST_WEEK} wk ›</span></button>
       <button class="card journey-card" data-act="run-plan" aria-label="See full plan"><div class="journey">${journey}</div></button>
 
-      <div class="section-h"><h2>Coach notes</h2></div>
-      <section class="card stack" style="gap:8px">${learn}</section>
+      <section class="card collapse">
+        <button class="collapse-h" data-act="toggle-open" data-key="run:learn" aria-expanded="${!!ui.open['run:learn']}">
+          <h3>Coach notes<span class="n">${LEARN.length}</span></h3><span class="pm">${ui.open['run:learn'] ? '–' : '+'}</span>
+        </button>
+        ${ui.open['run:learn'] ? `<div class="collapse-body">${learn}</div>` : ''}
+      </section>
 
       <div class="section-h"><h2>Run log</h2>${st.totalMin ? `<span class="count">${st.totalMin} min total</span>` : ''}</div>
       <section class="card">${log || '<p class="empty">Your runs will show up here after you log them.</p>'}</section>
