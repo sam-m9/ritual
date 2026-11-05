@@ -78,8 +78,9 @@ export function settingsView(data, ui) {
         <input class="field" style="margin-top:10px" inputmode="numeric" value="${esc(s.restSeconds || 60)}" aria-label="Rest target in seconds" data-in="setting" data-field="restSeconds">
         <div class="label" style="margin-top:14px">Sound when rest is up</div>
         <div class="seg" style="margin-top:8px">
-          ${[['voice', 'Chime + voice'], ['chime', 'Chime'], ['off', 'Off']].map(([v, l]) => `<button class="${(s.restSound || 'voice') === v ? 'on' : ''}" data-act="rest-sound" data-v="${v}">${l}</button>`).join('')}
+          ${[['chime', 'Chime'], ['voice', 'Chime + voice'], ['off', 'Off']].map(([v, l]) => `<button class="${(s.restSound || 'chime') === v ? 'on' : ''}" data-act="rest-sound" data-v="${v}">${l}</button>`).join('')}
         </div>
+        ${(s.restSound || 'chime') === 'voice' ? '<p class="fine" style="margin-top:8px">On iPhone the spoken cue pauses your music. Pick Chime to keep it playing.</p>' : ''}
         <div class="label" style="margin-top:14px">With music playing</div>
         <div class="seg" style="margin-top:8px">
           ${[['mix', 'Mix'], ['interrupt', 'Interrupt'], ['duck', 'Duck (beta)']].map(([v, l]) => `<button class="${(s.audioMode || 'mix') === v ? 'on' : ''}" data-act="audio-mode" data-v="${v}">${l}</button>`).join('')}

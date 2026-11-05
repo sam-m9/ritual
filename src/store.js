@@ -42,7 +42,7 @@ export function defaultData() {
     app: 'ritual',
     schema: SCHEMA,
     updatedAt: new Date().toISOString(),
-    settings: { unit: 'lb', waistUnit: 'in', proteinMin: 170, proteinMax: 190, restSeconds: 60, restSound: 'voice', audioMode: 'mix' },
+    settings: { unit: 'lb', waistUnit: 'in', proteinMin: 170, proteinMax: 190, restSeconds: 60, restSound: 'chime', audioMode: 'mix' },
     program: clone(SEED_PROGRAM),
     current: {},
     sessions: [],
@@ -382,6 +382,15 @@ const REVISIONS = [
         if (cur?.sets) for (const k of Object.keys(cur.sets)) if (!keep.has(k)) delete cur.sets[k];
         if (cur?.swaps) for (const k of Object.keys(cur.swaps)) if (!keep.has(k)) delete cur.swaps[k];
       }
+    },
+  },
+  {
+    // Rest cues must never pause music: chime only, mixed on top of it.
+    id: 'rest-sound-mix-2026-11-05',
+    apply(data) {
+      const s = data.settings;
+      if (!s.restSound || s.restSound === 'voice') s.restSound = 'chime';
+      if (s.audioMode === 'interrupt') s.audioMode = 'mix';
     },
   },
   {

@@ -157,7 +157,7 @@ function checkRestAlert() {
   if (ms < target) return;
   t.alerted = true;
   store.saveUI();
-  const mode = data().settings.restSound || 'voice';
+  const mode = data().settings.restSound || 'chime';
   // Don't ring long after the fact (e.g. the phone was locked through it).
   if (mode !== 'off' && ms - target < 8000) restChime(mode === 'voice');
 }
@@ -495,9 +495,9 @@ const actions = {
   },
 
   'rest-test'() {
-    unlockAudio();
-    const mode = data().settings.restSound || 'voice';
-    restChime(mode !== 'chime')
+    const mode = data().settings.restSound || 'chime';
+    unlockAudio({ speech: mode === 'voice' });
+    restChime(mode === 'voice')
       .then(() => toast('Playing. Turn the volume up if it was quiet'))
       .catch((err) => toast(`iPhone blocked the sound (${err?.name || 'error'}). Tap again`));
   },

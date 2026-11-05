@@ -227,12 +227,17 @@ export function restChime(withVoice = true) {
   return played;
 }
 
-/** Call from a tap (Start, Restart, Test) so iOS lets cues play later without one. */
-export function unlockAudio() {
-  // Arm with the mix session so a silent clip never pauses your music.
+/**
+ * Call from a tap (Start, Restart, Test) so iOS lets cues play later without one.
+ * Speech is only warmed up for runs: on iPhone any speech, even silent, pauses your music.
+ */
+let armed = false;
+document.addEventListener('visibilitychange', () => { if (document.hidden) armed = false; });
+export function unlockAudio({ speech = false } = {}) {
+  // Arm with the mix session so a silent clip never pauses your music; once per visit is enough.
   try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch { /* unsupported */ }
-  playSound('silence').catch(() => {});
-  if ('speechSynthesis' in window) {
+  if (!armed) { armed = true; playSound('silence').catch(() => { armed = false; }); }
+  if (speech && 'speechSynthesis' in window) {
     const u = new SpeechSynthesisUtterance('ready');
     u.volume = 0;
     speechSynthesis.speak(u);
@@ -263,7 +268,7 @@ export const runner = {
   onDone: null,
 
   start(session, { detail = 'full', beeps = true } = {}) {
-    unlockAudio();
+    unlockAudio({ speech: true });
     this.live = { session, startedAt: Date.now(), pausedAt: null, pausedMs: 0, fired: [], detail, beeps };
     this.cues = buildCues(session, detail);
     this.save();
