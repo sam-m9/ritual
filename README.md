@@ -4,12 +4,17 @@ A personal, phone-first training and nutrition log. You add it to your iPhone Ho
 
 ## What it does
 
+- **Today**: opens on what to do now: the next (or in-progress) training day with an estimated time, today's run, this week's lifts and runs, a morning weigh-in, a "never miss twice" nudge after 3+ days off, and a backup reminder.
+
 - **Train**: a recomp / lean-bulk program: 4 firm days (Upper A push, Legs once and hard, Upper B pull, Upper C chest & arms) plus an optional Pump day. For every set you get weight and reps fields and a check box. "Last time" shows what you lifted before. Checking a blank set fills it from last time. A day is finished by "Finish & log" (or "Finish early"). The app then opens on the **next day in the rotation**, so a missed gym day never breaks the order. The optional Pump day is skipped in the rotation; tap its pill when you want it.
 - **Run**: a guided plan from about 1–3 minutes of running to 30 minutes non-stop (Foundation, weeks 1–9), then a 5K block (weeks 10–14) and a 10K block (weeks 15–24). Every session is time-based run-walk at talking pace. A full-screen guided timer speaks cues over your music ("Run. A minute and a half. Easy pace…"), with countdown beeps and a black pocket screen. After each run you log breathing, effort and pain, and the plan adapts:
   - good run: next session
   - gasping, effort 8+ or stopped early: repeat the session
   - pain above 3/10: 3 gentle ease-off sessions, then back to where you were
 - **Nutrition**: protein target, a 4-meal checklist that resets each day, hand-portion guide, a cookbook (meal ideas, snacks, low-sugar desserts with ingredients, steps, protein and time), and a grocery staples list. "+ Groceries" on a recipe adds its ingredients to that list.
+- **Training helpers**: progression hints ("hit the top of the range on every set → go up to X", with the heavier weight pre-filled), PR badges and toasts (estimated 1RM), a rest timer that starts itself when you tick a set and uses each exercise's own rest, Swap exercise (for today or for good), and a session summary after Finish & log.
+- **Cookbook helpers**: search, filters (Saved, ≤10 min, No-cook, Batch prep, 45g+ protein, Anchors), Save and Made-it counts, and Cook mode (one big step at a time, screen kept on, step timers).
+- **Reminders & backup**: Settings adds weekly gym/run/planning events to iPhone Calendar (.ics); Google Drive sync keeps `Ritual/ritual-data.json` up to date (needs a Google OAuth client ID; setup steps are in Settings).
 - **Progress**: one-tap bodyweight and waist logging, trend bars, sessions this week and in total, and per-lift history built from every finished session.
 - **Settings**: edit the program (exercises, sets, reps, effort, equipment, video links), set the protein target, export or import JSON, and reset.
 

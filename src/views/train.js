@@ -1,8 +1,8 @@
 import { esc, fmt, repLow } from '../util.js';
 import { EQ_ICONS, EQ_LABELS, ICON } from '../icons.js';
-import { dayProgress, findDay, lastEntry, setsFor, topSet, dayHasActivity } from '../domain.js';
+import { dayProgress, findDay, lastEntry, setsFor, topSet, dayHasActivity, effectiveEx, progressionFor } from '../domain.js';
 import { nextSession, totalSec } from '../runplan.js';
-import { muscleOf, muscleLabel } from '../muscles.js';
+import { muscleOf, muscleLabel, restOf } from '../muscles.js';
 import { today } from '../util.js';
 
 export function effortTag(ex, day) {
@@ -32,8 +32,9 @@ export function isExpanded(ui, ex, done) {
   return o === 'open' ? true : o === 'closed' ? false : !done;
 }
 
-function exerciseCard(data, ui, day, ex) {
-  const sets = setsFor(data, day.id, ex);
+function exerciseCard(data, ui, day, slot) {
+  const ex = effectiveEx(data, day.id, slot);
+  const sets = setsFor(data, day.id, slot);
   const done = sets.every((s) => s.c);
   const checked = sets.filter((s) => s.c).length;
   const expanded = isExpanded(ui, ex, done);
@@ -53,8 +54,8 @@ function exerciseCard(data, ui, day, ex) {
   const head = `
     <div class="ex-head" data-act="toggle-ex" data-ex="${ex.id}" role="button" aria-expanded="${expanded}">
       <div class="eq-tile" title="${EQ_LABELS[ex.eq] || ''}">${EQ_ICONS[ex.eq] || ''}</div>
-      <div class="ex-title"><h3 class="ex-name">${esc(ex.name)}</h3>${sub}</div>
-      ${expanded && !done ? `<button class="play" data-act="video" data-url="${esc(videoUrl(ex))}" aria-label="${ex.url ? 'Watch form video' : 'Search form videos'}">${ICON.play}</button>` : ''}
+      <div class="ex-title"><h3 class="ex-name">${esc(ex.name)}</h3>${ex.swapped ? `<div class="ex-swapped label">Swapped today · plan: ${esc(ex.base)}</div>` : ''}${sub}</div>
+      ${expanded && !done ? `<button class="play" data-act="video" data-url="${esc(videoUrl(ex))}" aria-label="${ex.url && !ex.swapped ? 'Watch form video' : 'Search form videos'}">${ICON.play}</button>` : ''}
       <span class="chev ${expanded ? 'up' : ''}" aria-hidden="true">${ICON.chevron}</span>
     </div>`;
 
@@ -64,7 +65,7 @@ function exerciseCard(data, ui, day, ex) {
 
   const rows = sets.map((s, i) => `
     <div class="set-row">
-      <div class="set-n">${i + 1}${fail && i === sets.length - 1 ? '<small>FAIL</small>' : ''}</div>
+      <div class="set-n">${i + 1}${s.pr ? '<small class="pr">PR</small>' : fail && i === sets.length - 1 ? '<small>FAIL</small>' : ''}</div>
       <input class="num" inputmode="decimal" enterkeyhint="next" placeholder="${esc(unit)}"
         aria-label="Set ${i + 1} weight" value="${esc(s.w)}" data-in="set" data-field="w" data-ex="${ex.id}" data-i="${i}">
       <span class="x">×</span>
@@ -77,9 +78,20 @@ function exerciseCard(data, ui, day, ex) {
   return `
   <article class="ex-card ${done ? 'done' : ''}">
     ${head}
-    <div class="last label"><span class="bp-tag">${esc(muscleLabel(muscleOf(ex)))}</span> Last time · <b>${esc(lastLine(data, ex))}</b></div>
+    <div class="last label"><span class="bp-tag">${esc(muscleLabel(muscleOf(ex)))}</span> Last time · <b>${esc(lastLine(data, ex))}</b><span class="rest-tag">Rest ${fmtClock(restOf(ex) * 1000)}</span></div>
+    ${progLine(data, ex, day, done)}
     ${rows}
+    <div class="ex-tools"><button data-act="open-swap" data-ex="${slot.id}">Swap exercise</button></div>
   </article>`;
+}
+
+/** Progression hint from last time: go up, push reps, or hold. */
+function progLine(data, ex, day, done) {
+  if (done || day.noRir) return '';
+  const p = progressionFor(data, ex);
+  if (!p.kind) return '';
+  const icon = p.kind === 'up' ? '↑' : p.kind === 'hold' ? '=' : '→';
+  return `<div class="prog prog-${p.kind}"><b>${icon}</b> ${esc(p.text)}</div>`;
 }
 
 /** "55 lb × 9" for a finished exercise: its heaviest set. */
@@ -91,7 +103,8 @@ function doneSummary(sets, unit) {
 }
 
 /** Compact rest stopwatch. Ticks are painted by main.js without re-rendering the page. */
-export function restTimer(ui, target) {
+export function restTimer(ui, fallback) {
+  const target = ui.timer?.target || fallback;
   const running = !!ui.timer?.start;
   const hasTime = running || (ui.timer?.acc || 0) > 0;
   return `
@@ -99,7 +112,7 @@ export function restTimer(ui, target) {
       <div class="rest-main">
         <span class="rest-label label">Rest</span>
         <span class="rest-clock" id="rest-clock">0:00</span>
-        <span class="rest-goal label">/ ${fmtClock(target * 1000)}</span>
+        <span class="rest-goal label" id="rest-goal">/ ${fmtClock(target * 1000)}</span>
       </div>
       <div class="rest-actions">
         ${hasTime ? `<button class="rest-btn ghost" data-act="timer-reset">${running ? 'Restart' : 'Reset'}</button>` : ''}

@@ -2,8 +2,9 @@
 // Rendering is plain HTML strings with event delegation: tiny, fast, no dependencies.
 
 import { store, mergeRecipes } from './store.js';
-import { exportToFile, importFromFile } from './sync.js';
-import { findDay, finishDay, lastEntry, logMetric, setsFor, suggestedDayId } from './domain.js';
+import { exportToFile, importFromFile, downloadCalendar, drive } from './sync.js';
+import { findDay, finishDay, lastEntry, logMetric, setsFor, suggestedDayId, effectiveEx, isPR, sessionSummary } from './domain.js';
+import { restOf } from './muscles.js';
 import { EQUIPMENT } from './seed.js';
 import { ICON } from './icons.js';
 import { num, uid, today } from './util.js';
@@ -12,6 +13,8 @@ import { nutritionView } from './views/nutrition.js';
 import { progressView } from './views/progress.js';
 import { settingsView, recipeEditorView } from './views/settings.js';
 import { runView, runLiveView, runLogView, runPlanView, runLevelView, paintRun } from './views/run.js';
+import { todayView } from './views/today.js';
+import { summaryView, swapView, cookView } from './views/sheets.js';
 import { runner, restChime, unlockAudio, setAudioMode } from './runner.js';
 import { nextSession, applyResult, longestRunSec, totalSec } from './runplan.js';
 
@@ -19,13 +22,16 @@ const root = document.getElementById('app');
 const fileInput = document.getElementById('import-file');
 let recipeDraft = null;
 let runDraft = null;
+let lastSummary = null;
+let cookTimer = null;
 let toastTimer = null;
 
 store.init();
 setAudioMode(store.data.settings.audioMode);
 
-// Open on the day in progress, or the next one in the rotation.
+// Open on the day in progress, or the next one in the rotation, and land on Today.
 store.ui.dayId = suggestedDayId(store.data);
+store.ui.tab = 'today';
 
 // A guided run that was in progress when the app closed picks up where it was.
 runner.onTick = paintRun;
@@ -48,6 +54,7 @@ if (runner.restore()) {
 // ---------- render ----------
 
 const TABS = [
+  { id: 'today', label: 'Today' },
   { id: 'train', label: 'Train' },
   { id: 'run', label: 'Run' },
   { id: 'nutrition', label: 'Nutrition' },
@@ -75,11 +82,20 @@ function render({ keepScroll = true } = {}) {
   } else if (ui.view === 'run-level') {
     body = runLevelView(data);
     chrome = false;
+  } else if (ui.view === 'summary') {
+    body = summaryView(lastSummary, data.settings.unit);
+    chrome = false;
+  } else if (ui.view === 'swap') {
+    body = swapView(data, ui);
+    chrome = false;
+  } else if (ui.view === 'cook') {
+    body = cookView(data.nutrition.recipes.find((r) => r.id === ui.cookId), ui);
+    chrome = false;
   } else if (ui.view === 'recipe' && recipeDraft) {
     body = recipeEditorView(recipeDraft);
     chrome = false;
   } else {
-    const views = { train: trainView, run: runView, nutrition: nutritionView, progress: progressView };
+    const views = { today: todayView, train: trainView, run: runView, nutrition: nutritionView, progress: progressView };
     const view = views[ui.tab] || trainView;
     body = `
       <header class="topbar">
@@ -136,7 +152,7 @@ function paintTimer() {
 function checkRestAlert() {
   const t = store.ui.timer;
   if (!t?.start || t.alerted) return;
-  const target = (Number(data().settings.restSeconds) || 60) * 1000;
+  const target = (Number(t.target) || Number(data().settings.restSeconds) || 60) * 1000;
   const ms = timerElapsed();
   if (ms < target) return;
   t.alerted = true;
@@ -174,7 +190,7 @@ function toast(message, action) {
  * Run a change with a 5-second Undo. Snapshots the whole document (it's small),
  * so undo is exact no matter what the change touched.
  */
-function withUndo(message, change) {
+function withUndo(message, change, onUndo) {
   const snap = JSON.parse(JSON.stringify(store.data));
   const uiSnap = { dayId: store.ui.dayId, open: { ...store.ui.open } };
   if (change() === false) return;
@@ -185,6 +201,7 @@ function withUndo(message, change) {
       Object.assign(store.ui, uiSnap);
       store.commit();
       store.saveUI();
+      onUndo?.();
       render();
       toast('Undone');
     },
@@ -194,7 +211,7 @@ function withUndo(message, change) {
 // ---------- sheets (full-screen pages with ← Back) ----------
 // Each sheet adds a history entry, so the phone's back gesture closes it too.
 
-const SHEETS = new Set(['settings', 'recipe', 'run-plan', 'run-level']);
+const SHEETS = new Set(['settings', 'recipe', 'run-plan', 'run-level', 'summary', 'swap', 'cook']);
 
 function openSheet(view) {
   store.ui.view = view;
@@ -203,6 +220,7 @@ function openSheet(view) {
 }
 
 function closeSheet() {
+  if (store.ui.view === 'cook') { screenLock?.release?.().catch(() => {}); screenLock = null; clearInterval(cookTimer); }
   store.ui.view = null;
   store.ui.resetArmed = false;
   recipeDraft = null;
@@ -213,6 +231,86 @@ function leaveSheet() {
   if (history.state?.sheet) history.back(); // popstate closes it
   else closeSheet();
 }
+
+// ---------- swap, schedule, calendar, drive helpers ----------
+
+/** Swap the open slot for today (or for good when the box is ticked). Empty name = back to plan. */
+function applySwap(name, eq) {
+  const dayId = store.ui.dayId;
+  const day = findDay(data(), dayId);
+  const slot = day.exercises.find((e) => e.id === store.ui.swapEx);
+  if (!slot) return leaveSheet();
+  const perm = document.getElementById('swap-perm')?.checked;
+  const cur = (data().current[dayId] ||= { startedAt: null, sets: {} });
+  cur.swaps ||= {};
+  if (!name) {
+    delete cur.swaps[slot.id];
+  } else if (perm) {
+    slot.name = name;
+    if (eq) slot.eq = eq;
+    delete slot.muscle;
+    delete slot.url;
+    delete cur.swaps[slot.id];
+  } else {
+    cur.swaps[slot.id] = { name, eq: eq || slot.eq };
+  }
+  // Untouched weights re-fill from the new exercise's history.
+  for (const s of cur.sets[slot.id] || []) if (!s.t && !s.c) { s.w = ''; s.a = false; }
+  store.commit();
+  leaveSheet();
+  toast(name ? `${perm ? 'Program changed' : 'Swapped for today'}: ${name}` : 'Back to the plan');
+}
+
+function schedule() {
+  return (data().settings.schedule ||= { gymDays: [1, 2, 4, 5], gymTime: '18:00', runDays: [1, 4], runTime: '19:15', sundayPlan: true });
+}
+
+let screenLock = null;
+async function holdScreenOn() {
+  try { screenLock = await navigator.wakeLock?.request('screen'); } catch { screenLock = null; }
+}
+
+// ---------- Google Drive ----------
+
+function markBackedUp() {
+  (data().meta ||= {}).lastBackupAt = new Date().toISOString();
+  store.persist();
+}
+
+async function driveSync({ interactive = false } = {}) {
+  const clientId = data().settings.drive?.clientId;
+  if (!clientId) { if (interactive) toast('Add your Google client ID in Settings first'); return; }
+  try {
+    const result = await drive.sync({
+      clientId,
+      interactive,
+      confirmLoad: async (remote) => window.confirm(
+        `Google Drive has newer Ritual data (saved ${new Date(remote.updatedAt).toLocaleString()}).\n\nOK: load it onto this phone.\nCancel: keep this phone's data and overwrite Drive.`),
+    });
+    if (result === 'needs-auth') { if (interactive) toast('Tap Connect to sign in to Google'); render(); return; }
+    markBackedUp();
+    if (result === 'pulled') { store.ui.dayId = suggestedDayId(data()); toast('Loaded your data from Drive'); }
+    else if (interactive) toast('Saved to Google Drive');
+    render();
+  } catch (err) {
+    if (interactive) toast(err.message || 'Drive sync failed');
+    render();
+  }
+}
+
+function driveConnect() {
+  driveSync({ interactive: true });
+}
+
+// Quietly keep Drive up to date after edits (only while a Google token is valid).
+let pushTimer = null;
+store.subscribe(() => {
+  if (!drive.tokenValid() || !drive.state.fileId) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => {
+    drive.push().then((ok) => { if (ok) markBackedUp(); }).catch(() => {});
+  }, 8000);
+});
 
 window.addEventListener('popstate', () => {
   if (SHEETS.has(store.ui.view)) closeSheet();
@@ -404,6 +502,128 @@ const actions = {
       .catch((err) => toast(`iPhone blocked the sound (${err?.name || 'error'}). Tap again`));
   },
 
+  // ----- today -----
+  'go-train'(el) {
+    store.ui.dayId = el.dataset.day;
+    store.ui.tab = 'train';
+    store.saveUI();
+    render({ keepScroll: false });
+  },
+
+  // ----- swap -----
+  'open-swap'(el) {
+    store.ui.swapEx = el.dataset.ex;
+    store.ui.swapPerm = false;
+    openSheet('swap');
+  },
+
+  'do-swap'(el) {
+    applySwap(el.dataset.name, el.dataset.eq);
+  },
+
+  // ----- cook mode -----
+  'open-cook'(el) {
+    store.ui.cookId = el.dataset.id;
+    store.ui.cookStep = 0;
+    store.ui.cookHave = {};
+    holdScreenOn();
+    openSheet('cook');
+  },
+
+  'cook-step'(el) {
+    const r = data().nutrition.recipes.find((x) => x.id === store.ui.cookId);
+    const next = (store.ui.cookStep || 0) + Number(el.dataset.d);
+    if (r && next >= r.steps.length) {
+      r.made = (r.made || 0) + 1;
+      r.lastMade = today();
+      store.commit();
+      leaveSheet();
+      toast(`Nice. Made ${r.made}×`);
+      return;
+    }
+    store.ui.cookStep = Math.max(0, next);
+    render({ keepScroll: false });
+  },
+
+  'cook-have'(el) {
+    const h = (store.ui.cookHave ||= {});
+    h[el.dataset.i] = !h[el.dataset.i];
+    render();
+  },
+
+  'cook-timer'(el) {
+    unlockAudio();
+    const end = Date.now() + Number(el.dataset.min) * 60000;
+    clearInterval(cookTimer);
+    const paint = () => {
+      const box = document.getElementById('cook-clock');
+      const left = end - Date.now();
+      if (box) { box.hidden = false; box.textContent = left > 0 ? fmtClock(left) : 'Done'; }
+      if (left <= 0) { clearInterval(cookTimer); restChime(false).catch(() => {}); }
+    };
+    paint();
+    cookTimer = setInterval(paint, 500);
+  },
+
+  // ----- cookbook -----
+  'fav-recipe'(el) {
+    const r = data().nutrition.recipes.find((x) => x.id === el.dataset.id);
+    if (!r) return;
+    r.fav = !r.fav;
+    store.commit();
+    render();
+  },
+
+  'made-recipe'(el) {
+    const r = data().nutrition.recipes.find((x) => x.id === el.dataset.id);
+    if (!r) return;
+    r.made = (r.made || 0) + 1;
+    r.lastMade = today();
+    store.commit();
+    render();
+    toast(`Made ${r.made}×`);
+  },
+
+  'recipe-filter'(el) {
+    store.ui.recipeFilter = store.ui.recipeFilter === el.dataset.f ? '' : el.dataset.f;
+    render();
+  },
+
+  'clear-search'() {
+    store.ui.recipeQuery = '';
+    store.ui.recipeFilter = '';
+    render();
+  },
+
+  // ----- settings: training + reminders + drive -----
+  'auto-rest'(el) {
+    data().settings.autoRest = el.dataset.v === '1';
+    store.commit();
+    render();
+  },
+
+  'sched-day'(el) {
+    const s = schedule();
+    const list = s[el.dataset.k];
+    const d = Number(el.dataset.d);
+    s[el.dataset.k] = list.includes(d) ? list.filter((x) => x !== d) : [...list, d].sort();
+    store.commit();
+    render();
+  },
+
+  'add-calendar'() {
+    downloadCalendar(schedule());
+    toast('Opening Calendar file. Tap “Add All”');
+  },
+
+  'drive-connect'() { driveConnect(); },
+  'drive-sync'() { driveSync({ interactive: true }); },
+  'drive-disconnect'() {
+    drive.disconnect();
+    toast('Drive disconnected');
+    render();
+  },
+
   'lift-view'(el) {
     store.ui.liftView = el.dataset.v;
     store.saveUI();
@@ -429,7 +649,7 @@ const actions = {
     const t = (store.ui.timer ||= { start: null, acc: 0 });
     if (t.start) { t.acc += Date.now() - t.start; t.start = null; }
     else {
-      if (!t.acc) t.alerted = false;
+      if (!t.acc) { t.alerted = false; t.target = Number(data().settings.restSeconds) || 60; }
       t.start = Date.now();
       if (data().settings.restSound !== 'off') unlockAudio(); // a tap lets iOS play the chime later
     }
@@ -449,12 +669,14 @@ const actions = {
 
   'toggle-set'(el) {
     const dayId = store.ui.dayId;
-    const ex = exById(dayId, el.dataset.ex);
-    if (!ex) return;
-    const sets = setsFor(data(), dayId, ex);
+    const slot = exById(dayId, el.dataset.ex);
+    if (!slot) return;
+    const ex = effectiveEx(data(), dayId, slot);
+    const sets = setsFor(data(), dayId, slot);
     const i = Number(el.dataset.i);
     const set = sets[i];
     set.c = !set.c;
+    if (!set.c) set.pr = false;
     if (set.c) {
       // Blank inputs on check: copy from last time (same set number, else that day's top set), or from the set above.
       const last = lastEntry(data(), ex.name);
@@ -464,6 +686,18 @@ const actions = {
       if (set.r === '') set.r = ref?.r != null ? String(ref.r) : prev?.r || '';
       const cur = data().current[dayId];
       cur.startedAt ||= new Date().toISOString();
+      // Personal record vs everything logged before (and earlier sets today).
+      const earlier = sets.filter((x, j) => j !== i && x.c);
+      if (isPR(data(), ex.name, set, earlier)) {
+        set.pr = true;
+        toast(`New PR · ${ex.name} ${set.w ? `${set.w} ${data().settings.unit} × ` : ''}${set.r}`);
+      }
+      // Rest starts by itself, sized to the exercise.
+      if (data().settings.autoRest !== false) {
+        store.ui.timer = { start: Date.now(), acc: 0, alerted: false, target: restOf(ex) };
+        if (data().settings.restSound !== 'off') unlockAudio();
+        store.saveUI();
+      }
     }
     // Finishing the last set folds the exercise away.
     if (sets.every((x) => x.c)) delete store.ui.open[`ex:${ex.id}`];
@@ -480,14 +714,19 @@ const actions = {
     if (!data().current[day.id] || !Object.values(data().current[day.id].sets).some((l) => l.some((x) => x.c))) {
       return toast('Check at least one set first');
     }
+    let session = null;
     withUndo(`${day.name} logged`, () => {
-      finishDay(data(), day.id);
+      session = finishDay(data(), day.id);
       for (const ex of day.exercises) delete store.ui.open[`ex:${ex.id}`]; // next session starts open
       store.ui.dayId = suggestedDayId(data());
+      store.ui.timer = { start: null, acc: 0 };
       store.commit();
       store.saveUI();
-    });
-    render({ keepScroll: false });
+    }, () => { if (store.ui.view === 'summary') leaveSheet(); });
+    if (session) {
+      lastSummary = sessionSummary(data(), session);
+      openSheet('summary');
+    } else render({ keepScroll: false });
   },
 
   // ----- nutrition -----
@@ -638,6 +877,9 @@ const actions = {
 
   export() {
     exportToFile();
+    (data().meta ||= {}).lastBackupAt = new Date().toISOString();
+    store.commit();
+    render();
     toast('Exported');
   },
 
@@ -708,12 +950,25 @@ root.addEventListener('input', (e) => {
     const ex = exById(el.dataset.day, el.dataset.ex);
     if (!ex) return;
     const f = el.dataset.field;
-    ex[f] = f === 'sets' ? Math.max(1, Math.min(10, parseInt(el.value, 10) || 1)) : el.value;
+    ex[f] = f === 'sets' ? Math.max(1, Math.min(10, parseInt(el.value, 10) || 1))
+      : f === 'rest' ? (parseInt(el.value, 10) || '')
+      : el.value;
   } else if (kind === 'day') {
     const day = dayById(el.dataset.day);
     day[el.dataset.field] = el.value;
   } else if (kind === 'setting') {
     d.settings[el.dataset.field] = num(el.value) ?? '';
+  } else if (kind === 'sched-time') {
+    schedule()[el.dataset.field] = el.value;
+  } else if (kind === 'drive-client') {
+    (d.settings.drive ||= {}).clientId = el.value.trim();
+  } else if (kind === 'recipe-search') {
+    store.ui.recipeQuery = el.value;
+    const pos = el.selectionStart;
+    render();
+    const box = root.querySelector('[data-in="recipe-search"]');
+    if (box) { box.focus(); box.setSelectionRange(pos, pos); }
+    return;
   }
   store.commit();
 });
@@ -727,6 +982,11 @@ root.addEventListener('change', (e) => {
 // ---------- forms ----------
 
 const forms = {
+  'custom-swap'(form) {
+    const name = form.elements.name.value.trim();
+    if (name) applySwap(name, '');
+  },
+
   'run-log'(form) {
     if (!runDraft.breath || runDraft.effort === null) return toast('Pick breathing and effort');
     const entry = {
@@ -813,6 +1073,12 @@ document.addEventListener('visibilitychange', () => {
 });
 
 render({ keepScroll: false });
+
+// Pull/push with Drive on open and whenever the app comes back to the foreground.
+if (data().settings.drive?.clientId && drive.tokenValid()) driveSync();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && data().settings.drive?.clientId && drive.tokenValid()) driveSync();
+});
 
 // ---------- offline ----------
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

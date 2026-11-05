@@ -14,7 +14,7 @@ export function setsFor(data, dayId, ex) {
   const n = Math.max(1, Number(ex.sets) || 1);
   while (list.length < n) list.push({ w: '', r: '', c: false });
   if (list.length > n) list.length = n;
-  carryWeights(data, ex, list);
+  carryWeights(data, effectiveEx(data, dayId, ex), list);
   return list;
 }
 
@@ -26,7 +26,8 @@ export function setsFor(data, dayId, ex) {
  */
 export function carryWeights(data, ex, list) {
   const last = lastEntry(data, ex.name)?.sets || [];
-  let live = null;
+  const prog = progressionFor(data, ex);
+  let live = prog.kind === 'up' && prog.weight != null ? String(prog.weight) : null;
   list.forEach((s, i) => {
     // A value that wasn't auto-filled (a) was typed by you, even before typing was tracked: keep it.
     if (s.w !== '' && !s.a && !s.t) s.t = true;
@@ -105,7 +106,7 @@ export function finishDay(data, dayId) {
     const sets = (cur.sets[ex.id] || [])
       .filter((s) => s.c)
       .map((s) => ({ w: num(s.w), r: num(s.r) }));
-    if (sets.length) exercises.push({ exId: ex.id, name: ex.name, sets });
+    if (sets.length) exercises.push({ exId: ex.id, name: effectiveEx(data, dayId, ex).name, sets });
   }
   if (!exercises.length) return null;
   const session = {
@@ -237,4 +238,133 @@ export function bodyPartStats(data, weeks = 8) {
       ...g,
       lifts: [...g.lifts.values()].sort((a, b) => String(b.points.at(-1).at).localeCompare(String(a.points.at(-1).at))),
     }));
+}
+
+// ---------- per-day swaps, progression, PRs, summaries ----------
+
+/** Exercise as shown today: a "swap for today" replaces name/equipment but keeps the slot (id, sets). */
+export function effectiveEx(data, dayId, ex) {
+  const sw = data.current?.[dayId]?.swaps?.[ex.id];
+  return sw ? { ...ex, name: sw.name, eq: sw.eq || ex.eq, muscle: sw.muscle || ex.muscle, swapped: true, base: ex.name } : ex;
+}
+
+/** Top number of a rep range: "6-10" -> 10, "8-12 per leg" -> 12, "12" -> 12. */
+export function repTop(reps) {
+  const nums = String(reps || '').match(/\d+/g);
+  return nums ? Number(nums[Math.min(1, nums.length - 1)]) : null;
+}
+export function repBottom(reps) {
+  const m = String(reps || '').match(/\d+/);
+  return m ? Number(m[0]) : null;
+}
+
+/** Smallest sensible jump for the equipment. */
+export function increment(ex, unit = 'lb') {
+  if (unit === 'kg') return ex.eq === 'db' ? 2 : 2.5;
+  return ex.eq === 'db' ? 5 : ex.eq === 'bar' ? 5 : 5;
+}
+
+/**
+ * Progression rule: hit the top of the rep range on every working set last time, then add the
+ * smallest weight. Returns { kind: 'up' | 'push' | 'hold' | null, weight, text }.
+ */
+export function progressionFor(data, ex) {
+  const last = lastEntry(data, ex.name);
+  if (!last) return { kind: null };
+  const sets = last.sets.filter((s) => s.r != null);
+  if (!sets.length) return { kind: null };
+  const top = repTop(ex.reps);
+  const bottom = repBottom(ex.reps);
+  const unit = data.settings.unit;
+  const weights = sets.map((s) => s.w).filter((w) => w != null);
+  const w = weights.length ? Math.max(...weights) : null;
+  const atWeight = w == null ? sets : sets.filter((s) => s.w === w);
+  const allTop = top != null && atWeight.length >= Math.min(sets.length, Number(ex.sets) || sets.length)
+    && atWeight.every((s) => s.r >= top);
+  if (w == null) {
+    return allTop ? { kind: 'up', weight: null, text: `Hit ${top} on every set last time. Add a little load or slow the reps down.` } : { kind: 'push', weight: null, text: `Beat last time: ${Math.max(...sets.map((s) => s.r))} reps.` };
+  }
+  if (allTop) {
+    const next = Math.round((w + increment(ex, unit)) * 10) / 10;
+    return { kind: 'up', weight: next, text: `Hit ${top} on every set last time. Go up to ${next} ${unit}.` };
+  }
+  const minR = Math.min(...atWeight.map((s) => s.r));
+  if (bottom != null && minR < bottom) {
+    return { kind: 'hold', weight: w, text: `Stay at ${w} ${unit} and get every set to ${bottom}+.` };
+  }
+  return { kind: 'push', weight: w, text: `Stay at ${w} ${unit} and beat ${Math.max(...atWeight.map((s) => s.r))} reps.` };
+}
+
+/** Estimated 1-rep max (Epley). Bodyweight sets compare by reps instead. */
+export const e1rm = (w, r) => (w != null && r != null ? w * (1 + r / 30) : null);
+
+/** Best e1RM (or best reps for bodyweight) for a lift across finished sessions. */
+export function bestFor(data, name, beforeIso = null) {
+  const key = liftKey(name);
+  let best = null;
+  let bestReps = null;
+  for (const s of data.sessions) {
+    if (beforeIso && s.finishedAt && s.finishedAt >= beforeIso) continue;
+    for (const e of s.exercises) {
+      if (liftKey(e.name) !== key) continue;
+      for (const set of e.sets) {
+        const v = e1rm(set.w, set.r);
+        if (v != null && (best == null || v > best)) best = v;
+        if (set.w == null && set.r != null && (bestReps == null || set.r > bestReps)) bestReps = set.r;
+      }
+    }
+  }
+  return { e1rm: best, reps: bestReps };
+}
+
+/** Is this set a personal record vs everything logged before (and earlier sets today)? */
+export function isPR(data, name, set, earlierToday = []) {
+  const w = num(set.w);
+  const r = num(set.r);
+  if (r == null) return false;
+  const prev = bestFor(data, name);
+  if (prev.e1rm == null && prev.reps == null) return false; // first time isn't a PR
+  for (const s of earlierToday) {
+    const ew = num(s.w);
+    const er = num(s.r);
+    const v = e1rm(ew, er);
+    if (v != null && (prev.e1rm == null || v > prev.e1rm)) prev.e1rm = v;
+    if (ew == null && er != null && (prev.reps == null || er > prev.reps)) prev.reps = er;
+  }
+  if (w == null) return prev.reps != null && r > prev.reps;
+  const v = e1rm(w, r);
+  return prev.e1rm != null && v > prev.e1rm + 0.01;
+}
+
+/** Summary of a finished session for the "Session done" screen. */
+export function sessionSummary(data, session) {
+  const prior = { ...data, sessions: data.sessions.filter((s) => s.id !== session.id && (!s.finishedAt || s.finishedAt < session.finishedAt)) };
+  const sets = session.exercises.reduce((n, e) => n + e.sets.length, 0);
+  const volume = session.exercises.reduce((n, e) => n + e.sets.reduce((m, s) => m + (s.w || 0) * (s.r || 0), 0), 0);
+  const prs = [];
+  const byPart = {};
+  for (const e of session.exercises) {
+    const part = muscleForName(data, e.name);
+    byPart[part] = (byPart[part] || 0) + e.sets.length;
+    const best = bestFor(prior, e.name);
+    if (best.e1rm == null && best.reps == null) continue;
+    const top = e.sets.reduce((b, s) => {
+      const v = s.w != null ? e1rm(s.w, s.r) : null;
+      return v != null && (b == null || v > b.v) ? { v, s } : b;
+    }, null);
+    if (top && best.e1rm != null && top.v > best.e1rm + 0.01) prs.push({ name: e.name, w: top.s.w, r: top.s.r });
+    const repsTop = Math.max(-1, ...e.sets.filter((s) => s.w == null).map((s) => s.r ?? -1));
+    if (repsTop > 0 && best.reps != null && repsTop > best.reps) prs.push({ name: e.name, w: null, r: repsTop });
+  }
+  const lastSame = [...prior.sessions].reverse().find((s) => s.dayName === session.dayName);
+  const lastVolume = lastSame ? lastSame.exercises.reduce((n, e) => n + e.sets.reduce((m, s) => m + (s.w || 0) * (s.r || 0), 0), 0) : null;
+  const minutes = session.startedAt ? Math.max(1, Math.round((new Date(session.finishedAt) - new Date(session.startedAt)) / 60000)) : null;
+  const lastSets = lastSame ? lastSame.exercises.reduce((n, e) => n + e.sets.length, 0) : 0;
+  return { dayName: session.dayName, sets, volume, lastVolume, lastSets, prs, byPart, minutes, exercises: session.exercises.length };
+}
+
+/** Rough minutes for a day: every set ~45 s of work plus its rest. */
+export function estimateMinutes(day, restOfFn) {
+  const sec = day.exercises.reduce((n, ex) => n + (Number(ex.sets) || 0) * (45 + restOfFn(ex)), 0);
+  return Math.round(sec / 60 / 5) * 5;
 }

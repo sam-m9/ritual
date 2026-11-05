@@ -1,7 +1,11 @@
 import { esc } from '../util.js';
 import { EQ_ICONS, EQ_LABELS } from '../icons.js';
 import { EFFORT_OPTIONS, RECIPE_CATEGORIES } from '../seed.js';
-import { MUSCLES, muscleOf } from '../muscles.js';
+import { MUSCLES, muscleOf, inferRest } from '../muscles.js';
+import { drive } from '../sync.js';
+
+const WD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const ago = (iso) => { if (!iso) return 'never'; const d = Math.round((Date.now() - new Date(iso)) / 86400000); return d <= 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`; };
 import { findDay } from '../domain.js';
 import { SCHEMA } from '../store.js';
 
@@ -33,11 +37,13 @@ function exerciseEditor(day, ex) {
           ${MUSCLES.map((m) => `<option value="${m.id}" ${m.id === muscleOf(ex) ? 'selected' : ''}>${m.label}</option>`).join('')}
         </select></div>
       <input class="field" type="url" inputmode="url" value="${esc(ex.url)}" placeholder="Form video link (YouTube, etc.)" data-in="ex" data-field="url" ${attrs}>
+      <div><div class="mini-label">Rest · seconds</div><input class="field" inputmode="numeric" value="${esc(ex.rest || '')}" placeholder="${inferRest(ex)} (auto)" data-in="ex" data-field="rest" ${attrs}></div>
       <input class="field" value="${esc(ex.cue || '')}" placeholder="Cue (optional), e.g. superset with #5, pause at stretch" data-in="ex" data-field="cue" ${attrs}>
     </div>`;
 }
 
 export function settingsView(data, ui) {
+  const sched = data.settings.schedule || { gymDays: [1, 2, 4, 5], gymTime: '18:00', runDays: [1, 4], runTime: '19:15', sundayPlan: true };
   const day = findDay(data, ui.editDayId);
   const pills = data.program.map((d) => `
     <button class="pill ${d.id === day.id ? 'on' : ''}" data-act="edit-day" data-day="${d.id}">Day ${d.num} · ${esc(d.name)}</button>`).join('');
@@ -62,7 +68,13 @@ export function settingsView(data, ui) {
 
       <div class="section-h"><h2>Training</h2></div>
       <div class="card">
-        <div class="label">Rest timer target · seconds</div>
+        <div class="label">Start rest automatically when you tick a set</div>
+        <div class="seg" style="grid-template-columns:1fr 1fr;margin:8px 0 14px">
+          <button class="${s.autoRest !== false ? 'on' : ''}" data-act="auto-rest" data-v="1">On</button>
+          <button class="${s.autoRest === false ? 'on' : ''}" data-act="auto-rest" data-v="0">Off</button>
+        </div>
+        <p class="fine" style="margin-bottom:12px">Each exercise uses its own rest: about 2:30 for heavy squats and deadlifts, 2:00 for other compound lifts, 1:15 for isolation work. You can change any of them under the exercise above.</p>
+        <div class="label">Manual timer default · seconds</div>
         <input class="field" style="margin-top:10px" inputmode="numeric" value="${esc(s.restSeconds || 60)}" aria-label="Rest target in seconds" data-in="setting" data-field="restSeconds">
         <div class="label" style="margin-top:14px">Sound when rest is up</div>
         <div class="seg" style="margin-top:8px">
@@ -97,12 +109,44 @@ export function settingsView(data, ui) {
         <button class="btn block" style="margin-top:10px" data-act="import-recipes">Add recipes</button>
       </div>
 
+      <div class="section-h"><h2>Reminders</h2></div>
+      <div class="card">
+        <p class="fine" style="margin-bottom:12px">Adds repeating events to your iPhone Calendar, which then reminds you 15 minutes before. Re-add after changing days (delete the old events first).</p>
+        <div class="mini-label">Gym days</div>
+        <div class="day-chips">${WD.map((l, i) => `<button class="${sched.gymDays.includes(i + 1) ? 'on' : ''}" data-act="sched-day" data-k="gymDays" data-d="${i + 1}">${l}</button>`).join('')}</div>
+        <div class="grid2" style="margin:8px 0 12px"><div><div class="mini-label">Gym time</div><input class="field" type="time" value="${esc(sched.gymTime)}" data-in="sched-time" data-field="gymTime"></div>
+          <div><div class="mini-label">Run time</div><input class="field" type="time" value="${esc(sched.runTime)}" data-in="sched-time" data-field="runTime"></div></div>
+        <div class="mini-label">Run days</div>
+        <div class="day-chips">${WD.map((l, i) => `<button class="${sched.runDays.includes(i + 1) ? 'on' : ''}" data-act="sched-day" data-k="runDays" data-d="${i + 1}">${l}</button>`).join('')}</div>
+        <p class="fine" style="margin:8px 0">Plus a Sunday 5 pm “Plan the week” reminder.</p>
+        <button class="btn block" data-act="add-calendar">Add to Calendar</button>
+      </div>
+
       <div class="section-h"><h2>Data</h2></div>
       <div class="card stack">
         <p class="fine">Everything lives on this phone as one JSON file. Export it as a backup, or import it on another device.</p>
+        <p class="fine">Last backup: <b>${esc(ago(data.meta?.lastBackupAt))}</b></p>
         <button class="btn block" data-act="export">Export to JSON</button>
         <button class="btn block ghost" data-act="import">Import from JSON</button>
-        <button class="btn block ghost" disabled>Save to Google Drive · SOON</button>
+      </div>
+
+      <div class="section-h"><h2>Google Drive</h2></div>
+      <div class="card stack">
+        ${drive.state.fileId ? `<p class="fine">Connected · last synced <b>${esc(ago(drive.state.lastSyncAt))}</b>${drive.tokenValid() ? ' · auto-saving' : ' · tap Sync to reconnect'}</p>` : '<p class="fine">Keeps a copy of everything in <b>Ritual/ritual-data.json</b> in your Drive, saved automatically while connected. Ritual can only see that one file.</p>'}
+        <div><div class="mini-label">Google OAuth client ID</div>
+          <input class="field" value="${esc(data.settings.drive?.clientId || '')}" placeholder="xxxxxxxx.apps.googleusercontent.com" autocomplete="off" data-in="drive-client"></div>
+        <button class="btn block" data-act="${drive.state.fileId ? 'drive-sync' : 'drive-connect'}">${drive.state.fileId ? 'Sync now' : 'Connect Google Drive'}</button>
+        ${drive.state.fileId ? '<button class="btn block ghost" data-act="drive-disconnect">Disconnect</button>' : ''}
+        <details class="fine"><summary>One-time setup (5 minutes)</summary>
+          <ol>
+            <li>Go to console.cloud.google.com and create a project (e.g. “Ritual”).</li>
+            <li>APIs &amp; Services → Library → enable <b>Google Drive API</b>.</li>
+            <li>OAuth consent screen → External → add your Gmail as a test user.</li>
+            <li>Credentials → Create credentials → OAuth client ID → <b>Web application</b>.</li>
+            <li>Authorised JavaScript origins: <b>https://sam-m9.github.io</b>.</li>
+            <li>Copy the client ID, paste it above, then tap Connect.</li>
+          </ol>
+        </details>
         <button class="btn block ghost danger ${ui.resetArmed ? 'armed' : ''}" data-act="reset">${ui.resetArmed ? 'TAP AGAIN TO ERASE EVERYTHING' : 'Reset all data'}</button>
       </div>
       <p class="fine">Ritual · data schema v${SCHEMA} · ${data.sessions.length} sessions · ${data.nutrition.recipes.length} recipes</p>
