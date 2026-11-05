@@ -730,15 +730,6 @@ const actions = {
   },
 
   // ----- nutrition -----
-  'toggle-meal'(el) {
-    store.rolloverDay();
-    const done = data().nutrition.today.done;
-    if (done[el.dataset.id]) delete done[el.dataset.id];
-    else done[el.dataset.id] = true;
-    store.commit();
-    render();
-  },
-
   'toggle-open'(el) {
     const k = el.dataset.key;
     store.ui.open[k] = !store.ui.open[k];
@@ -1007,7 +998,7 @@ const forms = {
   },
 
   'add-groc'(form) {
-    const input = form.elements.item;
+    const input = form.elements.namedItem("staple");
     const added = addGroceries([input.value]);
     store.commit();
     render();

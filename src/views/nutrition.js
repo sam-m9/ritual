@@ -155,7 +155,7 @@ export function nutritionView(data, ui) {
       <section class="card">
         ${groc || '<p class="empty">Your go-to list. Check things off as you shop; checks stay until you clear them.</p>'}
         <form class="add-row" data-form="add-groc">
-          <input class="field" name="item" placeholder="Add a staple" autocomplete="off" enterkeyhint="done">
+          <input class="field" name="staple" placeholder="Add a staple" autocomplete="off" enterkeyhint="done">
           <button class="btn" type="submit">Add</button>
         </form>
         ${n.groceries.some((g) => g.done) ? '<button class="undo" data-act="clear-groc">Uncheck all</button>' : ''}
