@@ -18,7 +18,7 @@ export const FILTERS = [
   { id: 'nocook', label: 'No-cook', test: (r) => /no-?cook|zero-cook/i.test(`${r.title} ${r.notes}`) || (r.steps.length > 0 && !r.steps.some((s) => HEAT.test(s))) },
   { id: 'batch', label: 'Batch prep', test: (r) => /batch|meal prep|keeps \d|freez|sunday/i.test(r.notes || '') },
   { id: 'protein', label: '45g+ protein', test: (r) => Number(r.protein) >= 45 },
-  { id: 'anchor', label: 'Anchors', test: (r) => /^A ·/.test(r.notes || '') },
+  { id: 'anchor', label: 'Anchors', test: (r) => /^A\s*[·\-–—:]/.test(r.notes || '') },
 ];
 
 /** Saved first, then the ones you make most, then the rest in order. */
@@ -26,7 +26,7 @@ const byLove = (a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0) || (b.made || 0) - (a
 
 function recipeMeta(r) {
   const bits = [];
-  const rating = String(r.notes || '').match(/^([ABC]) ·/);
+  const rating = String(r.notes || '').match(/^([ABC])\s*[·\-–—:]/);
   if (rating) bits.push(RATING[rating[1]]);
   if (r.made) bits.push(`made ${r.made}×`);
   if (r.protein) bits.push(`${r.protein}g P`);

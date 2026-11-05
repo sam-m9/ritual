@@ -28,9 +28,10 @@ import AUSTIN_PACK_2 from './packs/austin-2026-11b.js';
 import AUSTIN_PACK_3 from './packs/austin-2026-11c.js';
 import GLOBAL_PACK from './packs/global-2026-11.js';
 import GLOBAL_PACK_2 from './packs/global-2026-11b.js';
+import SNACK_PACK from './packs/snacks-desserts-2026-11.js';
 
 /** Content packs shipped with the app, merged once into existing data. */
-const PACKS = [AUSTIN_PACK, AUSTIN_PACK_2, AUSTIN_PACK_3, GLOBAL_PACK, GLOBAL_PACK_2];
+const PACKS = [AUSTIN_PACK, AUSTIN_PACK_2, AUSTIN_PACK_3, GLOBAL_PACK, GLOBAL_PACK_2, SNACK_PACK];
 
 export const SCHEMA = 2;
 const DATA_KEY = 'ritual-v1';
@@ -126,7 +127,8 @@ export function mergeRecipes(data, pack) {
       ingredients: list(r.ingredients),
       steps: list(r.steps),
       url: String(r.url || ''),
-      notes: String(r.notes || ''),
+      // Ratings may arrive as "A - rotation anchor"; store them as "A · rotation anchor".
+      notes: String(r.notes || '').replace(/^([ABC])\s*[-–—:]\s+/, '$1 · '),
     });
     titles.add(title.toLowerCase());
     recipes++;
@@ -191,6 +193,7 @@ const GROCERY_MERGES = [
       'H-E-B Mootopia Small Curd Cottage Cheese 32 oz (H-E-B)',
       'Cottage cheese 32 oz: H-E-B Mootopia or Good Culture 2% (H-E-B)',
       'Good Culture 2% cottage cheese (H-E-B or Whole Foods)',
+      'Good Culture 4% and 2% cottage cheese (H-E-B)',
     ],
   },
   {
@@ -229,11 +232,19 @@ const GROCERY_MERGES = [
   },
   {
     name: "Trader Joe's High Protein Organic Super Firm Tofu, plus one backup in the freezer (Trader Joe's)",
-    from: ["Trader Joe's High Protein Organic Super Firm Tofu (Trader Joe's)", "Frozen Super Firm Tofu (Back-up) (Trader Joe's)"],
+    from: ["Trader Joe's High Protein Organic Super Firm Tofu (Trader Joe's)", "Frozen Super Firm Tofu (Back-up) (Trader Joe's)", "Trader Joe's High Protein Organic Tofu (Trader Joe's)"],
   },
   {
     name: 'Vinegars: distilled or apple cider, unseasoned rice (H-E-B), sherry (Whole Foods)',
     from: ['Distilled or apple cider vinegar for pickling (H-E-B)', 'Unseasoned rice vinegar (H-E-B)', 'Sherry vinegar (Whole Foods)'],
+  },
+  {
+    name: "Frozen shelled edamame (Trader Joe's)",
+    from: ["Trader Joe's shelled edamame (Trader Joe's)"],
+  },
+  {
+    name: 'Liquid egg whites: Hill Country Fare (H-E-B)',
+    from: ['Liquid egg whites (H-E-B)', 'Hill Country Fare liquid egg whites (H-E-B)'],
   },
   {
     name: "Rao's Homemade Marinara (H-E-B / Whole Foods)",
