@@ -1,7 +1,7 @@
 // Offline support. App files are precached; Google Fonts are cached on first use.
 // Bump VERSION whenever app files change so phones pick up the update.
 
-const VERSION = 'ritual-v2.2.1';
+const VERSION = 'ritual-v2.3.0';
 const FONT_CACHE = 'ritual-fonts';
 
 const SHELL = [

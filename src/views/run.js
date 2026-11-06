@@ -84,9 +84,9 @@ export function runView(data, ui) {
   }).join('');
 
   const log = run.log.slice(-6).reverse().map((r) => `
-    <div class="log-row">
+    <div class="log-row" role="button" tabindex="0" data-act="run-edit" data-id="${esc(r.id)}">
       <div><b>${esc(r.title)}</b><span class="label">${shortDate(r.date)} · W${r.week}${r.easeOff ? ' · ease-off' : ''}</span></div>
-      <div class="log-meta label">${mins(r.activeSec)}${r.km ? ` · ${r.km} ${esc(data.run.settings.distUnit || 'km')}` : ''}${r.pain > 3 ? ` · pain ${r.pain}` : ''}${r.completed ? '' : ' · stopped'}</div>
+      <div class="log-meta label">${mins(r.activeSec)}${r.km ? ` · ${r.km} ${esc(data.run.settings.distUnit || 'km')}` : ''}${r.pain > 3 ? ` · pain ${r.pain}` : ''}${r.completed ? '' : ' · stopped'} · <u>Edit</u></div>
     </div>`).join('');
 
   const learn = LEARN.map((c) => {
@@ -155,10 +155,13 @@ export function runView(data, ui) {
         </button>
         ${settingsOpen ? `
         <div class="collapse-body">
-          <div class="mini-label">Voice coaching</div>
+          <div class="mini-label">Cues</div>
           <div class="seg">
-            ${[['full', 'Coach'], ['minimal', 'Cues only'], ['off', 'Beeps only']].map(([v, l]) => `<button class="${set.voice === v ? 'on' : ''}" data-act="run-set" data-k="voice" data-v="${v}">${l}</button>`).join('')}
+            ${[['off', 'Tones'], ['minimal', 'Voice cues'], ['full', 'Voice coach']].map(([v, l]) => `<button class="${set.voice === v ? 'on' : ''}" data-act="run-set" data-k="voice" data-v="${v}">${l}</button>`).join('')}
           </div>
+          <p class="fine" style="margin-top:6px">${set.voice === 'off'
+            ? 'Tones play over your music and it keeps going. Rising notes: run. Falling notes: walk. Two dings: halfway. Three quick: 1 minute left.'
+            : 'On iPhone, web apps can’t lower your music for a voice the way Google Maps does, so spoken cues pause it. Pick Tones to keep music playing.'}</p>
           <div class="mini-label" style="margin-top:8px">Countdown beeps</div>
           <div class="seg" style="grid-template-columns:1fr 1fr">
             <button class="${set.beeps ? 'on' : ''}" data-act="run-set" data-k="beeps" data-v="1">On</button>
@@ -170,7 +173,7 @@ export function runView(data, ui) {
             <button disabled style="opacity:1">Week ${run.week}</button>
             <button data-act="run-week" data-delta="1">Next →</button>
           </div>
-          <button class="btn block ghost" style="margin-top:8px" data-act="run-test-voice">Test voice</button>
+          <button class="btn block ghost" style="margin-top:8px" data-act="run-test-voice">${set.voice === 'off' ? 'Test tones' : 'Test voice'}</button>
           <p class="fine">On iPhone: turn the ringer on and the volume up, and keep Ritual open. Locking the phone stops the cues; use the pocket screen instead.</p>
         </div>` : ''}
       </section>
@@ -250,12 +253,20 @@ export function runLogView(draft, distUnit) {
   const chip = (k, v, label) => `<button type="button" class="${draft[k] === v ? 'on' : ''}" data-act="rl-pick" data-k="${k}" data-v="${v}">${label}</button>`;
   const scale = (k) => Array.from({ length: 11 }, (_, n) => chip(k, n, n)).join('');
   return `
-    <header class="topbar sheet-h"><span class="brand">Run done</span></header>
+    <header class="topbar sheet-h"><span class="brand">${draft.editId ? 'Edit run' : 'Run done'}</span></header>
     <form class="stack" data-form="run-log">
       <section class="card ink">
         <div class="label run-kicker">${esc(draft.title)}</div>
         <div class="run-title" style="margin-top:6px">${mmss(draft.activeSec)}</div>
-        <div class="label" style="opacity:.75;margin-top:6px">${draft.completed ? 'Full session' : 'Stopped early'}</div>
+        <div class="label" style="opacity:.75;margin-top:6px">${draft.completed ? 'Full session' : 'Stopped early'}${draft.plannedSec ? ` · planned ${mmss(draft.plannedSec)}` : ''}</div>
+      </section>
+
+      <section class="card">
+        <div class="grid2">
+          <div><div class="mini-label">Time · min:sec</div><input class="field" name="time" inputmode="numeric" placeholder="25:00" value="${esc(draft.time ?? mmss(draft.activeSec))}"></div>
+          <div><div class="mini-label">Date</div><input class="field" name="date" type="date" value="${esc(draft.date || today())}"></div>
+        </div>
+        <p class="fine" style="margin-top:8px">Forgot to tap End? Set the time you actually ran.</p>
       </section>
 
       <section class="card">
@@ -273,8 +284,10 @@ export function runLogView(draft, distUnit) {
           <div><div class="mini-label">Note (optional)</div><input class="field" name="note" placeholder="Treadmill, hot…" value="${esc(draft.note || '')}"></div>
         </div>
       </section>
-      <button class="btn block" type="submit">Save run</button>
-      <button class="btn block ghost" type="button" data-act="rl-discard">Discard</button>
+      <button class="btn block" type="submit">${draft.editId ? 'Save changes' : 'Save run'}</button>
+      ${draft.editId
+        ? '<button class="btn block ghost" type="button" data-act="rl-cancel">Cancel</button><button class="btn block ghost danger" type="button" data-act="rl-delete">Delete run</button>'
+        : '<button class="btn block ghost" type="button" data-act="rl-discard">Discard</button>'}
     </form>`;
 }
 

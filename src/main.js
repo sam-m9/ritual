@@ -15,7 +15,7 @@ import { settingsView, recipeEditorView } from './views/settings.js';
 import { runView, runLiveView, runLogView, runPlanView, runLevelView, paintRun } from './views/run.js';
 import { todayView } from './views/today.js';
 import { summaryView, swapView, cookView } from './views/sheets.js';
-import { runner, restChime, unlockAudio, setAudioMode } from './runner.js';
+import { runner, restChime, unlockAudio, setAudioMode, playTone } from './runner.js';
 import { nextSession, applyResult, longestRunSec, totalSec } from './runplan.js';
 
 const root = document.getElementById('app');
@@ -322,6 +322,25 @@ window.addEventListener('popstate', () => {
 
 // ---------- helpers ----------
 
+/** "24:30", "24", "1:05:00" -> seconds; null if unreadable. */
+function parseDuration(v) {
+  const parts = String(v || '').trim().split(':').map((x) => x.trim());
+  if (!parts[0] || parts.length > 3 || parts.some((x) => !/^\d+$/.test(x))) return null;
+  const n = parts.map(Number);
+  const sec = n.length === 1 ? n[0] * 60 : n.length === 2 ? n[0] * 60 + n[1] : n[0] * 3600 + n[1] * 60 + n[2];
+  return sec < 6 * 3600 ? sec : null;
+}
+
+/** Keep typed log fields when a chip tap re-renders the run log form. */
+function keepRunForm() {
+  const form = root.querySelector('[data-form="run-log"]');
+  if (!form || !runDraft) return;
+  runDraft.km = form.elements.km.value;
+  runDraft.note = form.elements.note.value;
+  runDraft.time = form.elements.time.value;
+  runDraft.date = form.elements.date.value;
+}
+
 const data = () => store.data;
 const dayById = (id) => data().program.find((d) => d.id === id);
 const exById = (dayId, exId) => dayById(dayId)?.exercises.find((e) => e.id === exId);
@@ -430,11 +449,40 @@ const actions = {
   'rl-pick'(el) {
     const k = el.dataset.k;
     const v = k === 'effort' || k === 'pain' ? Number(el.dataset.v) : el.dataset.v;
-    const form = root.querySelector('[data-form="run-log"]');
-    runDraft.km = form.elements.km.value;
-    runDraft.note = form.elements.note.value;
+    keepRunForm();
     runDraft[k] = runDraft[k] === v && k === 'where' ? null : v;
     render();
+  },
+
+  'run-edit'(el) {
+    const entry = data().run.log.find((r) => r.id === el.dataset.id);
+    if (!entry) return;
+    runDraft = { ...entry, editId: entry.id };
+    store.ui.view = 'run-log';
+    history.pushState({ guard: true }, '');
+    render({ keepScroll: false });
+  },
+
+  'rl-cancel'() {
+    runDraft = null;
+    store.ui.view = null;
+    store.ui.tab = 'run';
+    render({ keepScroll: false });
+  },
+
+  'rl-delete'(el) {
+    if (el.dataset.armed !== '1') {
+      el.dataset.armed = '1';
+      el.textContent = 'Tap again to delete';
+      return;
+    }
+    const r = data().run;
+    withUndo('Run deleted', () => { r.log = r.log.filter((x) => x.id !== runDraft.editId); });
+    store.commit();
+    runDraft = null;
+    store.ui.view = null;
+    store.ui.tab = 'run';
+    render({ keepScroll: false });
   },
 
   'rl-discard'(el) {
@@ -475,6 +523,12 @@ const actions = {
   },
 
   'run-test-voice'() {
+    if (data().run.settings.voice === 'off') {
+      unlockAudio();
+      playTone('up');
+      setTimeout(() => playTone('down'), 1300);
+      return;
+    }
     if ('speechSynthesis' in window) {
       speechSynthesis.cancel();
       speechSynthesis.speak(new SpeechSynthesisUtterance('Run. A minute and a half. Easy pace. You should be able to talk.'));
@@ -980,13 +1034,31 @@ const forms = {
 
   'run-log'(form) {
     if (!runDraft.breath || runDraft.effort === null) return toast('Pick breathing and effort');
+    const sec = parseDuration(form.elements.time.value);
+    if (sec === null) return toast('Time looks off. Use min:sec, like 24:30');
+    const { editId, time, ...draft } = runDraft;
     const entry = {
       id: uid('run_'), date: today(),
-      ...runDraft,
+      ...draft,
+      date: /^\d{4}-\d{2}-\d{2}$/.test(form.elements.date.value) ? form.elements.date.value : (draft.date || today()),
+      activeSec: sec,
       km: num(form.elements.km.value),
       note: form.elements.note.value.trim(),
     };
     const r = data().run;
+    if (editId) {
+      // Editing only fixes the record; plan progress stays as it was decided at the time.
+      const i = r.log.findIndex((x) => x.id === editId);
+      if (i >= 0) r.log[i] = { ...r.log[i], ...entry, id: editId };
+      r.log.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      runDraft = null;
+      store.ui.view = null;
+      store.ui.tab = 'run';
+      store.commit();
+      toast('Run updated');
+      render({ keepScroll: false });
+      return;
+    }
     r.log.push(entry);
     r.verdict = { ...applyResult(r, entry), date: today() };
     runDraft = null;

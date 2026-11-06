@@ -49,7 +49,7 @@ export function defaultData() {
     body: { weight: [], waist: [] },
     run: {
       started: false, week: 2, index: 0, easeOff: 0, verdict: null,
-      settings: { voice: 'full', beeps: true, distUnit: 'km' },
+      settings: { voice: 'off', beeps: true, distUnit: 'km' },
       log: [],
     },
     nutrition: {
@@ -391,6 +391,13 @@ const REVISIONS = [
       const s = data.settings;
       if (!s.restSound || s.restSound === 'voice') s.restSound = 'chime';
       if (s.audioMode === 'interrupt') s.audioMode = 'mix';
+    },
+  },
+  {
+    // Run cues default to tones: on iPhone, web speech pauses music instead of ducking it.
+    id: 'run-tones-2026-11-06',
+    apply(data) {
+      if (data.run?.settings) data.run.settings.voice = 'off';
     },
   },
   {

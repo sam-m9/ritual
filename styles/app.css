@@ -446,6 +446,8 @@ select.field { appearance: none; -webkit-appearance: none; }
 
 .log-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .log-row:last-child { border-bottom: 0; }
+.log-row[data-act] { cursor: pointer; }
+.log-row u { text-decoration: underline; text-underline-offset: 2px; color: var(--ink); }
 .log-row b { display: block; font-weight: 800; font-size: 14px; }
 .log-row .label { color: var(--muted); font-size: 9.5px; }
 .log-meta { text-align: right; white-space: nowrap; }

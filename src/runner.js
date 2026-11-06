@@ -83,15 +83,17 @@ export function buildCues(session, detail = 'full') {
         ? 'Cool down. Five minutes of easy walking. Great work today. Keep walking longer if you have time.'
         : 'Cool down. Five minutes walking.';
     }
+    // Tones mode: rising notes = start running, falling notes = walk. No speech, so music keeps playing.
+    const tone = s.type === 'run' || s.type === 'steady' || s.type === 'stride' ? 'up' : 'down';
     if (detail !== 'off') cues.push({ t, key: `seg${i}`, seg: i, speak: text, beep: 2 });
-    else cues.push({ t, key: `seg${i}`, seg: i, beep: 2 });
+    else cues.push({ t, key: `seg${i}`, seg: i, tone });
 
     // Within-segment cues
-    if (detail !== 'off' && (s.type === 'run' || s.type === 'steady' || s.type === 'walk') && s.sec >= 240) {
-      cues.push({ t: t + Math.floor(s.sec / 2), key: `half${i}`, speak: 'Halfway.' });
+    if ((s.type === 'run' || s.type === 'steady' || s.type === 'walk') && s.sec >= 240) {
+      cues.push({ t: t + Math.floor(s.sec / 2), key: `half${i}`, ...(detail === 'off' ? { tone: 'double' } : { speak: 'Halfway.' }) });
     }
-    if (detail !== 'off' && s.sec >= 300 && s.type !== 'warm' && s.type !== 'cool') {
-      cues.push({ t: t + s.sec - 60, key: `min${i}`, speak: 'One minute left.' });
+    if (s.sec >= 300 && s.type !== 'warm' && s.type !== 'cool') {
+      cues.push({ t: t + s.sec - 60, key: `min${i}`, ...(detail === 'off' ? { tone: 'minute' } : { speak: 'One minute left.' }) });
     }
     if (full && s.type === 'run' && s.sec >= 480) {
       for (let k = 240; k < s.sec - 90; k += 240) {
@@ -105,7 +107,7 @@ export function buildCues(session, detail = 'full') {
     }
     t += s.sec;
   });
-  cues.push({ t, key: 'done', speak: detail === 'off' ? '' : 'Session complete. Nice work. Log how it felt.', beep: 3, done: true });
+  cues.push({ t, key: 'done', speak: detail === 'off' ? '' : 'Session complete. Nice work. Log how it felt.', ...(detail === 'off' ? { tone: 'done' } : { beep: 3 }), done: true });
   return cues.sort((a, b) => a.t - b.t);
 }
 
@@ -173,6 +175,9 @@ const SOUNDS = {
   silence: () => wav(0.15, () => 0),
   pip: () => tones([[0, 880, 0.14]], 0.2, 1),
   double: () => tones([[0, 1320, 0.13], [0.18, 1320, 0.13]], 0.36, 1),
+  up: () => tones([[0, 784, 0.2], [0.17, 1046.5, 0.2], [0.34, 1318.5, 0.38]], 0.8, 0.95),
+  down: () => tones([[0, 1318.5, 0.24], [0.24, 880, 0.42]], 0.75, 0.95),
+  minute: () => tones([[0, 1568, 0.1], [0.15, 1568, 0.1], [0.3, 1568, 0.1]], 0.45, 0.95),
   done: () => tones([[0, 1046.5, 0.25], [0.2, 1318.5, 0.25], [0.4, 1568, 0.45]], 0.9, 0.85),
   chime: () => tones([[0, 1046.5, 0.5], [0.16, 1568, 0.5], [0.55, 1046.5, 0.5], [0.71, 1568, 0.6]], 1.35, 0.62),
 };
@@ -198,6 +203,11 @@ export function playSound(name) {
   el.src = soundUrl(name);
   el.currentTime = 0;
   return el.play();
+}
+
+/** Play one of the run tones by name (see SOUNDS). */
+export function playTone(name) {
+  playSound(name).catch(() => {});
 }
 
 function beep(count = 1) {
@@ -268,7 +278,7 @@ export const runner = {
   onDone: null,
 
   start(session, { detail = 'full', beeps = true } = {}) {
-    unlockAudio({ speech: true });
+    unlockAudio({ speech: detail !== 'off' });
     this.live = { session, startedAt: Date.now(), pausedAt: null, pausedMs: 0, fired: [], detail, beeps };
     this.cues = buildCues(session, detail);
     this.save();
@@ -337,10 +347,10 @@ export const runner = {
     if (l.pausedAt) {
       l.pausedMs += Date.now() - l.pausedAt;
       l.pausedAt = null;
-      say('Go.', true);
+      if (l.detail === 'off') playTone('pip'); else say('Go.', true);
     } else {
       l.pausedAt = Date.now();
-      say('Paused.', true);
+      if (l.detail !== 'off') say('Paused.', true);
     }
     this.save();
     this.tick();
@@ -398,7 +408,8 @@ export const runner = {
           if (segCue) toPlay = [segCue, ...fresh];
         }
         for (const c of toPlay) {
-          if (c.beep && l.beeps) beep(c.beep);
+          if (c.tone) playTone(c.tone);
+          else if (c.beep && l.beeps) beep(c.beep);
           if (c.speak) say(c.speak, c.seg !== undefined || c.done);
         }
         this.save();
